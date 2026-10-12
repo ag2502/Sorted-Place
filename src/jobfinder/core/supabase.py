@@ -781,6 +781,29 @@ def delete_account(account: Account) -> None:
         raise SupabaseError(_message_from(response))
 
 
+def function_status(functions: tuple[str, ...]) -> dict[str, str]:
+    """Whether each database function in schema.sql exists, asked as nobody.
+
+    Calling one anonymously is harmless by design: `delete_my_account` refuses anyone not
+    signed in (and deletes nothing without a signed-in caller), and the stop and
+    unsubscribe functions are given a token no row carries. A missing one answers 404.
+    """
+    base, _ = _require_config()
+    probe = {"stop_event_reminder": {"p_token": "00000000-0000-0000-0000-000000000000"},
+             "unsubscribe_alerts": {"p_token": "00000000-0000-0000-0000-000000000000"}}
+    out = {}
+    with _client() as client:
+        for name in functions:
+            try:
+                response = client.post(f"{base}/rest/v1/rpc/{name}", headers=_auth_headers(),
+                                       json=probe.get(name, {}))
+                out[name] = ("missing: run schema.sql" if response.status_code == 404
+                             else "ok")
+            except httpx.HTTPError as exc:
+                out[name] = f"unreachable: {type(exc).__name__}"
+    return out
+
+
 def table_status(tables: tuple[str, ...]) -> dict[str, str]:
     """Whether each table exists, asked as nobody: row level security returns no rows,
     so this reads no one's data, but a missing table answers 404. For setup checks."""

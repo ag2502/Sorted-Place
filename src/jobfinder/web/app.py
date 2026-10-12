@@ -3769,6 +3769,9 @@ def healthz_accounts():
     info: dict = {"supabase_configured": supabase.configured()}
     if supabase.configured():
         info["tables"] = supabase.table_status(
-            ("applications", "saved_jobs", "profiles", "alerts")
+            ("applications", "saved_jobs", "profiles", "alerts", "event_reminders")
+        )
+        info["functions"] = supabase.function_status(
+            ("unsubscribe_alerts", "stop_event_reminder", "delete_my_account")
         )
     return info
