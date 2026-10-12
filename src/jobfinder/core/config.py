@@ -193,6 +193,10 @@ class Settings(BaseSettings):
     smtp_from: str = ""
     # Where links in an email point: the live site, not wherever the sender runs.
     site_url: str = "https://sorted-place.vercel.app"
+    # Where people reach whoever runs the site: questions, data requests, and employers
+    # or organisers asking for a listing to come down. Shown in the footer and on the
+    # privacy and terms pages, as the law expects of anyone holding personal data.
+    contact_email: str = "sortedplace@gmail.com"
 
     @field_validator("supabase_url")
     @classmethod

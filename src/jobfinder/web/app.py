@@ -257,7 +257,8 @@ RERUN_INCLUDE = RERUN_BASE + (
     " #results input[name=paid], #results select[name=pay], #results select[name=within], #results input[name=new_only],"
     " #results select[name=via], #results select[name=where]"
 )
-templates.env.globals.update(rerun_base=RERUN_BASE, rerun_include=RERUN_INCLUDE)
+templates.env.globals.update(rerun_base=RERUN_BASE, rerun_include=RERUN_INCLUDE,
+                             contact_email=settings.contact_email)
 
 
 def _profile(request: Request) -> dict | None:

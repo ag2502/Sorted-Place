@@ -1711,3 +1711,10 @@ def test_the_events_page_opens_with_or_without_events(client):
 
 def test_events_are_in_the_menu(client):
     assert 'href="/events"' in client.get("/").text
+
+
+def test_every_page_says_how_to_reach_us(client):
+    from jobfinder.core.config import settings
+
+    for path in ("/", "/events", "/companies", "/privacy"):
+        assert f"mailto:{settings.contact_email}" in client.get(path).text, path

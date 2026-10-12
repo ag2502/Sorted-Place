@@ -985,7 +985,8 @@ hr.rule{border:0;border-top:1px solid var(--line);margin:26px 0}
 .foot .wrap{display:flex;align-items:center;gap:18px 28px;flex-wrap:wrap;min-height:76px;
   font-size:13.5px;color:var(--ink-2);padding-top:18px;padding-bottom:18px}
 .foot .brand{font-size:14px}
-.foot nav{display:flex;gap:18px}
+.foot nav{display:flex;flex-wrap:wrap;gap:8px 18px}
+.foot p a{color:var(--aqua-deep);font-weight:600}
 .foot nav a{text-decoration:none;color:var(--ink-2)}
 .foot nav a:hover{color:var(--ink);text-decoration:underline}
 .foot p{margin:0 0 0 auto;max-width:52ch}
@@ -1275,8 +1276,10 @@ hr.rule{border:0;border-top:1px solid var(--line);margin:26px 0}
       <a href="/privacy">Your CV &amp; privacy</a>
       {# The AGPL asks a network service to offer its source to the people using it. #}
       <a href="https://github.com/ag2502/Sorted-Place" rel="noopener">Source code</a>
+      <a href="mailto:{{ contact_email }}">Contact</a>
     </nav>
-    <p>We gather jobs from companies' own careers pages. You apply on their site, never on ours.</p>
+    <p>We gather jobs from companies' own careers pages. You apply on their site, never on ours.
+      Want a listing removed, or have a question? Email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
   </div>
 </footer>
 
