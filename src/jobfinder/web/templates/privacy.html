@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set nav = 'privacy' %}
-{% block title %}What happens to your CV | Sorted Place{% endblock %}
+{% block title %}Privacy: what happens to your data | Sorted Place{% endblock %}
 {% from "_macros.html" import titlebar %}
 {% block railcount %}{% endblock %}
 {% block content %}
@@ -17,6 +17,16 @@
 <div class="win notes opens">
   {{ titlebar("what-we-keep.txt") }}
   <div class="win__body prose">
+  <h2>Who is responsible</h2>
+  <p class="muted">
+    Sorted Place is run by <strong>Amogh Gaikwad</strong>, an individual in Ireland, who
+    decides what is kept and why (the data controller). For anything about your data, or to
+    ask for a listing to be taken down, email
+    <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>. You will get an answer within
+    one month, usually much sooner.
+  </p>
+
+  <hr class="rule">
   <h2>What is kept from your CV</h2>
   <p class="muted">Saved with your account, in the EU, where only you can read it:</p>
   <ul class="muted">
@@ -35,52 +45,107 @@
   <h2>What else an account keeps</h2>
   <p class="muted">
     An account is optional. Searching and seeing every job work without one; ranking
-    against your CV, saving jobs and tracking what you applied to need one. It keeps, on
-    a server:
+    against your CV, saving jobs, tracking what you applied to, email alerts and event
+    reminders need one. It keeps:
   </p>
   <ul class="muted">
-    <li>Your email address, held by
-      <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a>
-      in the EU. If you sign in with Google, also the name and profile picture Google
-      shares; your Google password never reaches this site. If you use an email and
+    <li>Your email address. If you sign in with Google, also the name and profile picture
+      Google shares; your Google password never reaches this site. If you use an email and
       password instead, only a hash of the password is kept.</li>
     <li>Your CV and the reading of it described above, if you add one.</li>
     <li>What you told us you are looking for: the kinds of work, years of experience and
       the active jobs, internship, graduate and part-time choices, if you save them.</li>
     <li>For each job you mark as applied or save: its title, employer, link and the date.</li>
-    <li>Which email alerts you turned on, if any, and when the last one was sent. They go
-      only to the address you signed in with, only for what you ticked, and only when
-      something new has opened. Every email has a link that stops them all, and turning
-      them off on your profile does the same.</li>
+    <li>When you last searched, so a search can mark what is new since your last visit.</li>
+    <li>Which email alerts you turned on, if any, and when the last one was sent.</li>
+    <li>For each careers event you asked to be reminded of: the event, how often, and when
+      the last reminder went.</li>
   </ul>
   <p class="muted">
-    That is the whole of it: no tracking, no analytics tied to you, nothing shared
-    with employers or anyone else. You can remove any of it from
-    <a href="/profile">your profile</a> at any time, and removing something deletes the
-    row outright rather than archiving it.
+    No tracking, no advertising, no analytics tied to you, and nothing shared with
+    employers or anyone else.
   </p>
-  {# TODO: GDPR gives people the right to erasure of the account itself, not only of the
-     rows in it, and that needs a contact route a person can actually use. There is no
-     contact address anywhere on this site yet, so none is promised here. Add one and
-     say so in this paragraph. #}
   {% endif %}
 
   <hr class="rule">
-  <h2>Why it is built this way</h2>
+  <h2>Why we may keep it</h2>
+  <ul class="muted">
+    <li><strong>To give you what you asked for.</strong> Your account, CV, preferences, saved
+      and applied jobs are kept because you asked for features that need them (providing
+      the service you signed up for).</li>
+    <li><strong>Because you said yes.</strong> Email alerts and event reminders are sent only
+      with your consent, which you give by turning them on and take back by turning them
+      off or using the link in any email.</li>
+    <li><strong>To keep the site working and safe.</strong> Our hosts keep short technical
+      logs of requests, including IP addresses, to run the site and stop abuse (a
+      legitimate interest).</li>
+  </ul>
+
+  <hr class="rule">
+  <h2>How long it is kept</h2>
+  <ul class="muted">
+    <li>Everything in your account stays until you remove it, or delete the account.</li>
+    <li>An event reminder is deleted by itself once the event has happened.</li>
+    <li><strong>Delete your account</strong> at the foot of <a href="/profile#delete">your
+      profile</a> removes all of it at once: the sign-in, the CV file and its reading,
+      every list, alert and reminder. Nothing is archived. If you cannot sign in, email us
+      and we will do it for you.</li>
+    <li>The hosts' technical logs are kept for a short time under their own policies.</li>
+  </ul>
+
+  <hr class="rule">
+  <h2>Who helps run it</h2>
+  <p class="muted">These services process data for us, under contracts that oblige them to
+    protect it:</p>
+  <ul class="muted">
+    <li><a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a>:
+      accounts, everything an account keeps, and CV files, stored in the EU.</li>
+    <li><a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">Vercel</a>:
+      hosts the website, so it handles each page request, including your IP address.</li>
+    <li><a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub</a>:
+      runs the jobs and events crawl, and the step that sends alerts and reminders.</li>
+    <li><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google</a>:
+      sends the emails (from {{ contact_email }}, through Gmail), and signs you in if you
+      choose Google.</li>
+  </ul>
   <p class="muted">
-    A CV is personal data, and we treat it as the most sensitive thing on the site. It is
-    kept only because you asked for something that needs it, in a private place only your
-    account can open, never shared with employers or anyone else, and gone the moment you
-    remove it.
+    Vercel, GitHub and Google are based in the United States, so some of this may be
+    handled outside the EU, under the EU's Standard Contractual Clauses or the EU and US
+    Data Privacy Framework.
   </p>
 
   <hr class="rule">
-  <h2>The job records themselves</h2>
+  <h2>Cookies and what your browser loads</h2>
+  <p class="muted">
+    One cookie, set only when you sign in, keeps you signed in; it is needed for the site
+    to work, so it needs no banner. Light or dark mode is remembered on your device and
+    never sent anywhere. Fonts, company logos and event pictures are served from this site,
+    so your browser does not contact Google or the event sites to show them. If you signed
+    in with Google, your profile picture loads from Google.
+  </p>
+
+  <hr class="rule">
+  <h2>Your rights</h2>
+  <p class="muted">
+    You can see, correct, download or delete what is kept about you, object to how it is
+    used, and withdraw consent at any time. Most of it you can do yourself on
+    <a href="/profile">your profile</a>; for the rest, email
+    <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>. If you are unhappy with how
+    your data is handled, you can complain to Ireland's
+    <a href="https://www.dataprotection.ie" target="_blank" rel="noopener">Data Protection Commission</a>.
+  </p>
+
+  <hr class="rule">
+  <h2>The job and event records themselves</h2>
   <p class="muted">
     Job adverts are public business information, gathered from companies' own careers
-    pages. Every one links back to the company's original posting, which is where you
-    apply. This site never takes an application itself.
+    pages, and every one links back to the company's original posting, which is where you
+    apply. Careers events are gathered from the sites that list them, and registration is
+    always on their site. This site never takes an application or a booking itself.
+    Employers and organisers can ask for a listing to come down at
+    <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.
   </p>
+  <p class="muted small">Last updated 12 October 2026.</p>
   </div>
 </div>
 

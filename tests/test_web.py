@@ -1741,3 +1741,11 @@ def test_logos_come_through_this_site(client, monkeypatch):
     for bad in ("localhost", "169.254.169.254", "evil.com%2F..%2Fx", "a..com"):
         assert client.get(f"/logo/{bad}").status_code == 404, bad
     assert client.get("/static/font-geist-latin-1.woff2").status_code == 200
+
+
+def test_the_privacy_page_says_what_the_law_asks_it_to(client):
+    page = client.get("/privacy").text
+    for needed in ("Amogh Gaikwad", "Who is responsible", "Why we may keep it", "How long it is kept",
+                   "Who helps run it", "Supabase", "Vercel", "GitHub", "Gmail",
+                   "dataprotection.ie", "Delete your account"):
+        assert needed in page, needed
