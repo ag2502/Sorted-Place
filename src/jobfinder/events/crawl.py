@@ -16,10 +16,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from jobfinder.core.models import Event
-from jobfinder.events import relevance, sources
+from jobfinder.events import listing, relevance, sources
 from jobfinder.sources.base import build_client
 
 logger = logging.getLogger(__name__)
+
+# Eventbrite's terms forbid scraping its content and Meetup's likely do too, so from
+# these only the facts of an event are stored: no image and no description. The
+# description is still read once, in memory, to decide whether the event is about work.
+LINK_ONLY = listing.LINK_ONLY
 
 # Copied from a listing onto the stored event on every sighting.
 _FIELDS = ("url", "title", "summary", "organizer", "image_url", "starts_at", "ends_at",
@@ -83,6 +88,9 @@ def store(session: Session, raws: list[sources.RawEvent], summary: Summary,
             summary.updated += 1
         for name in _FIELDS:
             setattr(event, name, getattr(raw, name))
+        if raw.source in LINK_ONLY:
+            event.image_url = None
+            event.summary = None
         event.kind = kind
         event.last_seen_at = now
 

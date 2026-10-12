@@ -24,8 +24,8 @@
          data-from="{{ v.starts.strftime('%Y-%m-%d') }}" data-to="{{ v.ends.strftime('%Y-%m-%d') }}"
          {% if v.fits is defined and not v.fits %}hidden{% endif %}>
   <a class="tk__cover" href="/events/{{ v.id }}" tabindex="-1" aria-hidden="true">
-    {% if v.event.image_url %}
-    <img src="{{ v.event.image_url }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+    {% if v.image %}
+    <img src="{{ v.image }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
          onerror="this.remove()">
     {% endif %}
     <span class="tk__art"><svg><use href="#e-{{ v.event.kind }}"/></svg></span>

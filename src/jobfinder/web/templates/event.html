@@ -3,7 +3,7 @@
 {% from "_macros.html" import titlebar %}
 {% set nav = 'events' %}
 {% block title %}{{ v.event.title }}, {{ v.starts.strftime('%-d %B') }} | Sorted Place{% endblock %}
-{% block description %}{{ v.kind_label }}: {{ v.event.title }}, {{ v.date_label }}, {{ v.where }}. {{ (v.event.summary or '')[:150] }}{% endblock %}
+{% block description %}{{ v.kind_label }}: {{ v.event.title }}, {{ v.date_label }}, {{ v.where }}. {{ v.summary[:150] }}{% endblock %}
 {% block railcount %}{% endblock %}
 {% block content %}
 {% include "_events_kit.html" %}
@@ -12,7 +12,7 @@
   <article class="win evpage__win{% if v.status == 'live' %} tk--live{% endif %}">
     {{ titlebar((v.source_label|lower) ~ "/event.ics") }}
     <div class="evpage__cover">
-      {% if v.event.image_url %}<img src="{{ v.event.image_url }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}
+      {% if v.image %}<img src="{{ v.image }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}
       <span class="tk__art"><svg aria-hidden="true"><use href="#e-{{ v.event.kind }}"/></svg></span>
     </div>
     <div class="evpage__body">
@@ -29,7 +29,7 @@
         <div><dt>Price</dt><dd>{{ "Free" if v.event.is_free else ("Paid" if v.event.is_free == false else "See the listing") }}</dd></div>
       </dl>
 
-      {% if v.event.summary %}<p class="evpage__summary">{{ v.event.summary }}</p>{% endif %}
+      {% if v.summary %}<p class="evpage__summary">{{ v.summary }}</p>{% endif %}
 
       <div class="evpage__acts">
         <a class="btn" href="{{ v.event.url }}" target="_blank" rel="noopener">{{ "See it" if v.status == "done" else "Details and registration" }} on {{ v.source_label }}
@@ -57,7 +57,7 @@
   "startDate": v.starts.isoformat(), "endDate": v.ends.isoformat(),
   "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode" if v.event.is_online else "https://schema.org/OfflineEventAttendanceMode",
   "location": {"@type": "VirtualLocation", "url": v.event.url} if v.event.is_online else {"@type": "Place", "name": v.event.venue or v.place, "address": {"@type": "PostalAddress", "addressLocality": v.event.town or v.place, "addressCountry": "IE"}},
-  "description": v.event.summary or "", "url": v.event.url,
+  "description": v.summary, "url": v.event.url,
 }|tojson }}</script>
 
 <style>

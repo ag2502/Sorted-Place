@@ -218,3 +218,19 @@ def test_the_calendar_marks_days_with_events():
     fifteenth = october["days"][14]
     assert fifteenth["n"] == 1 and october["days"][9]["today"]
     assert months[1]["label"] == "November 2026"
+
+
+def test_eventbrite_and_meetup_keep_only_the_facts_of_an_event(session):
+    from jobfinder.events import listing
+
+    raws = sources.parse_eventbrite(_eventbrite_page([dict(FAIR, image={"url": "https://img.evbuc.com/x.jpg"})]))[0]
+    assert raws[0].summary and raws[0].image_url       # read, to decide it is a careers event
+    crawl.store(session, raws, crawl.Summary())
+    stored = session.execute(select(Event)).scalar_one()
+    assert stored.summary is None and stored.image_url is None
+    assert stored.title and stored.url and stored.starts_at and stored.region == "Dublin"
+    # Even a row stored before the rule shows neither.
+    stored.summary, stored.image_url = "old text", "https://img.evbuc.com/x.jpg"
+    starts, ends = listing.span(stored)
+    view = listing.EventView(stored, starts, ends, "later")
+    assert view.summary == "" and view.image is None

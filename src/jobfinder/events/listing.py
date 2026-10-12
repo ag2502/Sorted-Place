@@ -25,6 +25,10 @@ ASSUMED_LENGTH = timedelta(hours=3)
 WEEK = timedelta(days=7)
 # Where the same event is listed twice, the organiser's own listing wins.
 SOURCE_ORDER = {"gradireland": 0, "eventbrite": 1, "luma": 2, "meetup": 3}
+# Sites whose terms forbid reusing their content: we keep only the facts of an event
+# (title, date, time, place, organiser) and link to the listing, and show neither the
+# listing's image nor its description. See events.crawl.LINK_ONLY.
+LINK_ONLY = frozenset({"eventbrite", "meetup"})
 SOURCE_LABELS = {"gradireland": "gradireland", "eventbrite": "Eventbrite", "luma": "Luma",
                  "meetup": "Meetup"}
 
@@ -48,6 +52,15 @@ class EventView:
     @property
     def kind_label(self) -> str:
         return KINDS.get(self.event.kind, "Event")
+
+    @property
+    def image(self) -> str | None:
+        """The listing's own picture, where its site allows showing it."""
+        return None if self.event.source in LINK_ONLY else self.event.image_url
+
+    @property
+    def summary(self) -> str:
+        return "" if self.event.source in LINK_ONLY else (self.event.summary or "")
 
     @property
     def source_label(self) -> str:
@@ -243,7 +256,7 @@ def ics(view: EventView, page_url: str) -> str:
         *when,
         f"SUMMARY:{text(event.title)}",
         f"LOCATION:{text(view.where)}",
-        f"DESCRIPTION:{text((event.summary or '') + chr(10) + chr(10) + 'Details and registration: ' + event.url)}",
+        f"DESCRIPTION:{text((view.summary + chr(10) + chr(10) if view.summary else '') + 'Details and registration: ' + event.url)}",
         f"URL:{page_url}",
         "END:VEVENT", "END:VCALENDAR",
     ]
