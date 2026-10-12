@@ -1718,3 +1718,26 @@ def test_every_page_says_how_to_reach_us(client):
 
     for path in ("/", "/events", "/companies", "/privacy"):
         assert f"mailto:{settings.contact_email}" in client.get(path).text, path
+
+
+def test_no_page_asks_google_for_anything(client):
+    """Fonts and logos come from this site: a browser loading them from Google hands
+    Google the visitor's IP address, which needs consent under EU law."""
+    for path in ("/", "/?f=software-engineering", "/part-time", "/companies", "/events", "/privacy"):
+        text = client.get(path).text
+        for host in ("fonts.googleapis.com", "fonts.gstatic.com", "google.com/s2/favicons"):
+            assert host not in text, (path, host)
+
+
+def test_logos_come_through_this_site(client, monkeypatch):
+    from jobfinder.web import app as web
+
+    asked = []
+    monkeypatch.setattr(web, "_fetch_image", lambda url: asked.append(url) or (b"\x89PNG", "image/png"))
+    ok = client.get("/logo/Stripe.com")
+    assert ok.status_code == 200 and ok.headers["content-type"] == "image/png"
+    assert asked == ["https://www.google.com/s2/favicons?domain=stripe.com&sz=128"]
+    assert "s-maxage" in ok.headers["cache-control"]
+    for bad in ("localhost", "169.254.169.254", "evil.com%2F..%2Fx", "a..com"):
+        assert client.get(f"/logo/{bad}").status_code == 404, bad
+    assert client.get("/static/font-geist-latin-1.woff2").status_code == 200

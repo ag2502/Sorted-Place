@@ -56,7 +56,10 @@ class EventView:
     @property
     def image(self) -> str | None:
         """The listing's own picture, where its site allows showing it."""
-        return None if self.event.source in LINK_ONLY else self.event.image_url
+        if self.event.source in LINK_ONLY or not self.event.image_url:
+            return None
+        # Served from this site (web.app.event_image), never straight from theirs.
+        return f"/event-image/{self.event.id}"
 
     @property
     def summary(self) -> str:

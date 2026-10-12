@@ -802,6 +802,66 @@ def static_file(name: str):
     )
 
 
+# Company logos and event pictures are fetched by the server and served from this site,
+# so a visitor's browser never contacts Google or an event site, which would hand them
+# its IP address: EU data protection does not allow that without consent. The CDN keeps
+# each answer for a month, so Google sees each company's domain once in a while, and
+# never anyone's address.
+_DOMAIN = re.compile(r"^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$")
+# Event pictures only from the sites whose listings may be shown (events.listing).
+EVENT_IMAGE_HOSTS = ("images.lumacdn.com", "gradireland.com")
+_IMAGE_LIMIT = 3 * 1024 * 1024
+_PROXY_CACHE: dict[str, tuple[bytes, str]] = {}
+_PROXY_KEEP = 600
+_CACHED_A_MONTH = {"Cache-Control": "public, max-age=604800, s-maxage=2592000"}
+
+
+def _fetch_image(url: str) -> tuple[bytes, str] | None:
+    hit = _PROXY_CACHE.get(url)
+    if hit:
+        return hit
+    try:
+        with httpx.Client(timeout=httpx.Timeout(8.0, connect=4.0), follow_redirects=True,
+                          headers={"User-Agent": settings.user_agent}) as client:
+            response = client.get(url)
+    except httpx.HTTPError:
+        return None
+    kind = response.headers.get("content-type", "").split(";")[0]
+    if response.status_code != 200 or not kind.startswith("image/") or len(response.content) > _IMAGE_LIMIT:
+        return None
+    if len(_PROXY_CACHE) >= _PROXY_KEEP:
+        _PROXY_CACHE.pop(next(iter(_PROXY_CACHE)))
+    _PROXY_CACHE[url] = (response.content, kind)
+    return _PROXY_CACHE[url]
+
+
+@app.get("/logo/{domain}", include_in_schema=False)
+def company_logo(domain: str):
+    """A company's favicon, by way of Google's favicon service, from this site."""
+    domain = domain.lower()
+    if not _DOMAIN.match(domain):
+        raise HTTPException(status_code=404)
+    found = _fetch_image(f"https://www.google.com/s2/favicons?domain={domain}&sz=128")
+    if found is None:
+        raise HTTPException(status_code=404)
+    return Response(found[0], media_type=found[1], headers=_CACHED_A_MONTH)
+
+
+@app.get("/event-image/{event_id}", include_in_schema=False)
+def event_image(event_id: int):
+    """An event's own picture, from this site, where its listing may be shown."""
+    with session_scope() as session:
+        view = event_listing.get(session, event_id)
+    url = view.event.image_url if view is not None and view.image else None
+    host = urlparse(url).hostname or "" if url else ""
+    if not url or not any(host == h or host.endswith("." + h) for h in EVENT_IMAGE_HOSTS):
+        raise HTTPException(status_code=404)
+    found = _fetch_image(url)
+    if found is None:
+        raise HTTPException(status_code=404)
+    return Response(found[0], media_type=found[1], headers=_CACHED_A_MONTH)
+
+
 WEB = Path(__file__).parent
 
 # What makes the site installable: a phone adds it to the home screen as an app that

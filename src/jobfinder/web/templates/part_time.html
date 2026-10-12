@@ -615,7 +615,7 @@
   function logo(name, domain, cls) {
     var hue = ((name.length * 47) + ('abcdefghijklmnopqrstuvwxyz'.indexOf(name.charAt(0).toLowerCase()) + 1) * 29) % 360;
     return '<span class="logo ' + cls + '" style="--hue:' + hue + '" data-initial="' + esc(name.charAt(0).toUpperCase()) + '" aria-hidden="true">' +
-      (domain ? '<img src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) + '&amp;sz=128" alt="" loading="lazy" decoding="async" ' +
+      (domain ? '<img src="/logo/' + encodeURIComponent(domain.toLowerCase()) + '" alt="" loading="lazy" decoding="async" ' +
         'onload="this.naturalWidth>16?this.parentNode.classList.add(\'has-img\'):this.remove()" onerror="this.remove()">' : '') + '</span>';
   }
   var ARROW = ' <svg width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg>';
