@@ -1387,7 +1387,7 @@ if ('serviceWorker' in navigator) {
 // Signing out empties the pages kept for offline, so the next person on this phone does
 // not find the last one's saved list there.
 document.addEventListener('submit', function (e) {
-  if (window.caches && /\/logout$/.test(e.target.action || '')) caches.delete('sp-pages-1');
+  if (window.caches && /\/(logout|account\/delete)$/.test(e.target.action || '')) caches.delete('sp-pages-1');
 });
 // The browser's own install offer, held until someone asks for it from the menu.
 (function () {

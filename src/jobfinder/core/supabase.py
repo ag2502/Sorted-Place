@@ -739,6 +739,48 @@ def delete_files(account: Account, paths: list[str]) -> None:
         raise SupabaseError(_message_from(response))
 
 
+def list_files(account: Account, folder: str) -> list[str]:
+    """Every file under one of this account's folders, however deeply nested."""
+    base, _ = _require_config()
+    found: list[str] = []
+    pending = [folder.strip("/")]
+    with _client() as client:
+        while pending:
+            prefix = pending.pop()
+            response = client.post(
+                f"{base}/storage/v1/object/list/{CV_BUCKET}",
+                headers=_auth_headers(account.access_token),
+                json={"prefix": prefix, "limit": 1000, "offset": 0},
+            )
+            if response.status_code >= 400:
+                raise SupabaseError(_message_from(response))
+            for entry in response.json():
+                path = f"{prefix}/{entry['name']}"
+                # A folder is listed with no id; its contents are listed in turn.
+                (found if entry.get("id") else pending).append(path)
+    return found
+
+
+def delete_account(account: Account) -> None:
+    """Delete this account and everything it holds, for good.
+
+    The files go first, through the account's own token (stored files are not removed
+    by a database cascade). Then `delete_my_account` in schema.sql deletes the sign-in
+    itself, and every table's rows go with it, since each references it on delete
+    cascade: applications, saved jobs, profile and CV reading, alerts, event reminders.
+    """
+    delete_files(account, list_files(account, account.user_id))
+    base, _ = _require_config()
+    with _client() as client:
+        response = client.post(
+            f"{base}/rest/v1/rpc/delete_my_account",
+            headers=_auth_headers(account.access_token),
+            json={},
+        )
+    if response.status_code >= 400:
+        raise SupabaseError(_message_from(response))
+
+
 def table_status(tables: tuple[str, ...]) -> dict[str, str]:
     """Whether each table exists, asked as nobody: row level security returns no rows,
     so this reads no one's data, but a missing table answers 404. For setup checks."""

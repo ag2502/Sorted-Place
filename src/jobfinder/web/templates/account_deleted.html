@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{# Where Delete my account lands once it is done. #}
+{% from "_macros.html" import titlebar %}
+{% block title %}Account deleted | Sorted Place{% endblock %}
+{% block railcount %}{% endblock %}
+{% block content %}
+<section class="pagehead">
+  <h1>Your account is <span class="hl">deleted.</span></h1>
+  <p class="lede">Your sign-in, your CV and everything read from it, your saved and applied
+    jobs, your preferences, email alerts and event reminders are gone for good. Nothing was
+    archived, and no more emails will come.</p>
+</section>
+<div class="win unsubwin">
+  {{ titlebar("account") }}
+  <div class="win__body">
+    <p class="muted">Searching and browsing still work without an account, whenever you want them.</p>
+    <a class="btn" href="/#find">Find jobs <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+  </div>
+</div>
+<style>.unsubwin{max-width:640px;box-shadow:var(--shadow-lift)}</style>
+{% endblock %}

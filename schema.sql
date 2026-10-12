@@ -371,3 +371,25 @@ $$;
 
 revoke all on function public.stop_event_reminder(uuid) from public;
 grant execute on function public.stop_event_reminder(uuid) to anon, authenticated;
+
+
+-- ------------------------------------------------------------- delete account
+--
+-- "Delete my account" on the profile (added 2026-10-12): the right to erasure covers
+-- the account itself, not only the rows in it. Supabase lets no one delete their own
+-- sign-in through the API, so this function does it, as its owner, for the signed-in
+-- caller only (auth.uid()). Every table above references auth.users on delete
+-- cascade, so their rows go too. The CV files are deleted by the app first, since
+-- stored files are not part of the cascade.
+
+create or replace function public.delete_my_account()
+returns void
+language sql
+security definer
+set search_path = public, auth
+as $$
+    delete from auth.users where id = auth.uid();
+$$;
+
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

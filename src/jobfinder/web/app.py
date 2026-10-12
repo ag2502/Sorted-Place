@@ -2514,6 +2514,26 @@ def logout(request: Request):
     return RedirectResponse("/", status_code=303)
 
 
+@app.post("/account/delete", response_class=HTMLResponse)
+def delete_account(request: Request, confirm: str = Form(default="")):
+    """Delete the signed-in account and everything it holds, after typing DELETE."""
+    account = _account(request)
+    if account is None:
+        return RedirectResponse("/login?next=/profile%23delete", status_code=303)
+    if confirm.strip().upper() != "DELETE":
+        return RedirectResponse("/profile?delete=confirm#delete", status_code=303)
+    try:
+        supabase.delete_account(account)
+    except (supabase.SupabaseError, httpx.HTTPError):
+        logger.warning("could not delete an account", exc_info=True)
+        return RedirectResponse("/profile?delete=failed#delete", status_code=303)
+    _forget_account(request)
+    _start_fresh(request)
+    context = _base_context(request)
+    context["account"] = None
+    return templates.TemplateResponse(request, "account_deleted.html", context)
+
+
 PROFILE_TABS = ("saved", "applied")
 
 # What went wrong with a CV, in words for the person who uploaded it. Keyed so that the

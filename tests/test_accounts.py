@@ -9,6 +9,7 @@ untestable if it did.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import re
 from datetime import datetime, timedelta, timezone
 
@@ -1585,3 +1586,47 @@ def test_apply_only_opens_the_posting_and_asks_later(client: TestClient, fake):
 def test_nobody_is_asked_when_signed_out(client: TestClient, fake):
     page = client.get("/").text
     assert 'id="askapply"' not in page
+
+
+def test_deleting_an_account_removes_every_file_then_the_sign_in(monkeypatch: pytest.MonkeyPatch):
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.path.endswith("/object/list/cvs"):
+            prefix = json.loads(request.content)["prefix"]
+            if prefix == "user-1":
+                return httpx.Response(200, json=[{"name": "original", "id": None}])
+            return httpx.Response(200, json=[{"name": "cv.pdf", "id": "f1"}])
+        return httpx.Response(200, json={})
+
+    real_client = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda *a, **kw: real_client(*a, **{**kw, "transport": httpx.MockTransport(handler)}))
+    monkeypatch.setattr(supabase.settings, "supabase_url", "https://proj.supabase.co")
+    monkeypatch.setattr(supabase.settings, "supabase_anon_key", "sb_publishable_abc")
+    supabase.delete_account(_account())
+
+    removal = next(r for r in seen if r.method == "DELETE")
+    assert json.loads(removal.content) == {"prefixes": ["user-1/original/cv.pdf"]}
+    last = seen[-1]
+    assert last.url.path == "/rest/v1/rpc/delete_my_account"
+    assert last.headers["authorization"] == "Bearer access-token"
+
+
+def test_the_account_is_deleted_only_after_typing_delete(client: TestClient, monkeypatch):
+    deleted: list[str] = []
+    monkeypatch.setattr(supabase, "delete_account", lambda account: deleted.append(account.user_id))
+    _signed_in(client)
+    wrong = client.post("/account/delete", data={"confirm": "yes"}, follow_redirects=False)
+    assert wrong.headers["location"] == "/profile?delete=confirm#delete" and not deleted
+    done = client.post("/account/delete", data={"confirm": "delete"})
+    assert deleted == ["user-1"] and "Your account is" in done.text
+    # Signed out afterwards.
+    assert client.get("/profile", follow_redirects=False).status_code in (302, 303, 307)
+
+
+def test_only_the_signed_in_person_can_delete_themselves():
+    schema = (Path(__file__).resolve().parents[1] / "schema.sql").read_text()
+    block = schema.split("function public.delete_my_account()", 1)[1].split("$$;", 1)[0]
+    assert "where id = auth.uid()" in block
+    assert "grant execute on function public.delete_my_account() to authenticated;" in schema

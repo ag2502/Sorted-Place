@@ -341,6 +341,37 @@
   </section>
   {% endif %}
 
+  {# Delete the account itself, not only what is in it. Folded away and behind typing
+     DELETE, since it cannot be undone. #}
+  <section class="win aboutwin opens delwin" id="delete" aria-labelledby="delete-title">
+    {{ titlebar("delete-account") }}
+    <details class="aboutfold"{% if request.query_params.get("delete") %} open{% endif %}>
+      <summary class="aboutfold__head">
+        <span class="aboutfold__text">
+          <b id="delete-title">Delete your account</b>
+          <span class="muted small">Removes everything this account holds, for good.</span>
+        </span>
+        <span class="aboutfold__edit">Open <svg viewBox="0 0 10 10" width="11" height="11" aria-hidden="true"><path d="M2 3.8l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </summary>
+      <form class="about delform" method="post" action="/account/delete">
+        <p class="muted">This deletes your sign-in, your CV file and everything read from it, your
+          saved and applied jobs, your search preferences, email alerts and event reminders.
+          Nothing is kept or archived, and it cannot be undone.</p>
+        {% if request.query_params.get("delete") == "failed" %}
+        <p class="error" role="alert">Your account could not be deleted just now. Please try again, or email
+          <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> and we will do it for you.</p>
+        {% elif request.query_params.get("delete") == "confirm" %}
+        <p class="error" role="alert">Type DELETE in the box to confirm.</p>
+        {% endif %}
+        <label class="fieldname" for="delete-confirm">Type DELETE to confirm</label>
+        <div class="row">
+          <input id="delete-confirm" name="confirm" autocomplete="off" spellcheck="false" placeholder="DELETE" class="delform__input">
+          <button type="submit" class="delform__go">Delete my account</button>
+        </div>
+      </form>
+    </details>
+  </section>
+
 {# Drag a file anywhere over the page and it can be dropped anywhere, not only on the
    drop zone. #}
 <div class="dropveil" aria-hidden="true">
@@ -656,6 +687,10 @@
   .aboutwin{scroll-margin-top:70px}
   /* Preferences and alerts are two windows, so they sit apart like the ones above. */
   .aboutwin + .aboutwin{margin-top:28px}
+  .delform{padding-top:4px}
+  .delform__input{max-width:200px;font-family:var(--mono)}
+  .delform__go{background:var(--tag-red);border-color:var(--tag-red-deep);box-shadow:none}
+  .delform__go:hover:not(:disabled){filter:brightness(1.05)}
   .remlist{padding:18px 26px 22px}
   .remlist__head{display:flex;flex-direction:column;gap:2px;margin:0 0 10px}
   .remlist ul{list-style:none;margin:0 0 12px;padding:0}
