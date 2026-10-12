@@ -40,6 +40,13 @@ load, and adding a CV says it could not be saved. The `seen_at` and `prev_seen_a
 columns (2026-09-27) power "new since your last visit"; until they exist, results mark
 jobs new in the last day instead, and nothing else changes.
 
+Added 2026-10-10 and 2026-10-12: the `event_reminders` table and `stop_event_reminder`
+function (Remind me on careers events), and `delete_my_account` (Delete your account on
+the profile). Until it is re-run, Remind me is hidden for signed-in people and Delete
+your account says it failed and offers the contact address instead. To see whether it
+has been run, open `/healthz/accounts` on the live site: every table and function
+should say `ok`.
+
 ---
 
 ## Step 3 — Decide how sign-up works
