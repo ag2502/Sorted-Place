@@ -1749,3 +1749,9 @@ def test_the_privacy_page_says_what_the_law_asks_it_to(client):
                    "Who helps run it", "Supabase", "Vercel", "GitHub", "Gmail",
                    "dataprotection.ie", "Delete your account"):
         assert needed in page, needed
+
+
+def test_the_terms_are_one_click_away(client):
+    page = client.get("/terms")
+    assert page.status_code == 200 and "governed by the law of Ireland" in page.text
+    assert 'href="/terms"' in client.get("/").text

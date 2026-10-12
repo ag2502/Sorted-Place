@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% set nav = 'terms' %}
+{% block title %}Terms of use | Sorted Place{% endblock %}
+{% block description %}The terms for using Sorted Place: what the site is, what it is not, and how to reach us.{% endblock %}
+{% from "_macros.html" import titlebar %}
+{% block railcount %}{% endblock %}
+{% block content %}
+
+<section class="pagehead">
+  <h1>Terms of use, <span class="hl">in plain words.</span></h1>
+  <p class="lede">Sorted Place is a free site that gathers job adverts and careers events in
+    Ireland in one place. Using it means you accept these terms.</p>
+</section>
+
+<div class="win notes opens">
+  {{ titlebar("terms.txt") }}
+  <div class="win__body prose">
+  <h2>What this site is</h2>
+  <p class="muted">
+    Sorted Place is run by Amogh Gaikwad, an individual in Ireland. It lists job adverts read
+    from employers' own careers pages and careers events read from the sites that list them,
+    and links you to the original. It is not an employer, a recruiter or an event organiser,
+    and it is not connected to, or endorsed by, any employer or organiser it lists unless it
+    says so.
+  </p>
+
+  <hr class="rule">
+  <h2>Applying and registering happen elsewhere</h2>
+  <p class="muted">
+    Apply opens the employer's own posting, and an event's link opens the listing where you
+    register. This site never takes an application, a booking or a payment, and what happens
+    on those sites is between you and them, under their terms.
+  </p>
+
+  <hr class="rule">
+  <h2>Listings are as their owners publish them</h2>
+  <p class="muted">
+    We read adverts and events automatically and check them often, but we cannot promise any
+    listing is accurate, complete or still open: a role may have been filled, an event moved
+    or cancelled. Always check the original before you rely on it. Facts we read from an
+    advert, such as pay or work mode, are shown only when the advert states them, and are
+    never estimates.
+  </p>
+
+  <hr class="rule">
+  <h2>Your account</h2>
+  <p class="muted">
+    An account is optional and free. Keep your sign-in to yourself, use your own email, and
+    upload only a CV that is yours. You can delete your account at any time on
+    <a href="/profile#delete">your profile</a>. We may suspend an account that is used to
+    misuse the site.
+  </p>
+
+  <hr class="rule">
+  <h2>Using the site fairly</h2>
+  <p class="muted">
+    Please do not try to break, overload or get around the site's security, or use it to send
+    spam or anything unlawful. The site's code is open source under the GNU Affero General
+    Public License; the <a href="https://github.com/ag2502/Sorted-Place" rel="noopener">source
+    code</a> is there for anyone to read and reuse on those terms.
+  </p>
+
+  <hr class="rule">
+  <h2>Whose content it is</h2>
+  <p class="muted">
+    Job adverts belong to the employers who wrote them, event details to their organisers, and
+    company names and logos to their owners; they appear here only to show you what is open
+    and who is offering it. If you own something listed here and want it changed or taken
+    down, email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> and we will act on
+    it promptly.
+  </p>
+
+  <hr class="rule">
+  <h2>Our responsibility</h2>
+  <p class="muted">
+    The site is provided free and as it is. As far as the law allows, we are not responsible
+    for decisions you make based on a listing, for the content of other sites we link to, or
+    for the site being unavailable for a while. Nothing here limits rights you have as a
+    consumer that cannot be limited by law.
+  </p>
+
+  <hr class="rule">
+  <h2>Changes, and the law</h2>
+  <p class="muted">
+    These terms may be updated as the site changes; the date below says when they last were.
+    They are governed by the law of Ireland. How your personal data is handled is set out on
+    the <a href="/privacy">privacy page</a>. Questions:
+    <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.
+  </p>
+  <p class="muted small">Last updated 12 October 2026.</p>
+  </div>
+</div>
+
+<style>
+  .notes{box-shadow:var(--shadow-lift)}
+  .notes .win__bar{background:linear-gradient(180deg,var(--pad),var(--pad-2));border-bottom-color:var(--pad-edge)}
+  .notes .win__title{color:var(--pad-ink)}
+  .prose{max-width:none;padding:34px 44px 40px}
+  @media (max-width:860px){.prose{padding:24px 20px 28px}}
+  .prose h2{margin-top:0;font-size:1.45rem}
+  .prose p{max-width:66ch}
+  .prose a{color:var(--aqua-deep);font-weight:600}
+</style>
+{% endblock %}

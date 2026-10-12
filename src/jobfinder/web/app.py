@@ -3129,6 +3129,11 @@ def reset(request: Request):
     return RedirectResponse("/", status_code=303)
 
 
+@app.get("/terms", response_class=HTMLResponse)
+def terms(request: Request):
+    return templates.TemplateResponse(request, "terms.html", _base_context(request))
+
+
 @app.get("/privacy", response_class=HTMLResponse)
 def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", _base_context(request))
