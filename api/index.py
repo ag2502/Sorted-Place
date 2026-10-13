@@ -23,6 +23,8 @@ import os
 import sys
 from pathlib import Path
 
+from fastapi import Request
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
@@ -44,17 +46,22 @@ else:
     # pages fail fast and locally rather than hanging on a connection that cannot work.
     os.environ.pop("JOBFINDER_DATABASE_URL", None)
 
-from jobfinder.web.app import app  # noqa: E402
+from jobfinder.web.app import app, owner_only  # noqa: E402
 
 
 @app.get("/healthz", include_in_schema=False)
-def healthz() -> dict:
+def healthz(request: Request) -> dict:
     """Report how the deployment resolved its data, without touching the network.
 
     Added because the deployed function's behaviour could not be explained from outside:
     some routes failed instantly and others hung for the full database timeout. Guessing
-    from response times is slower than asking.
+    from response times is slower than asking. Anyone may ask whether the snapshot was
+    found, which is what an uptime check needs; the paths and errors behind the answer
+    are the owner's (see `owner_only`).
     """
+    if not owner_only(request):
+        return {"ok": SNAPSHOT is not None}
+
     from sqlalchemy import func, select
 
     from jobfinder.core.config import settings

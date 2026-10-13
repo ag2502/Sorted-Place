@@ -44,8 +44,9 @@ Added 2026-10-10 and 2026-10-12: the `event_reminders` table and `stop_event_rem
 function (Remind me on careers events), and `delete_my_account` (Delete your account on
 the profile). Until it is re-run, Remind me is hidden for signed-in people and Delete
 your account says it failed and offers the contact address instead. To see whether it
-has been run, open `/healthz/accounts` on the live site: every table and function
-should say `ok`.
+has been run, open `/healthz/accounts?token=<JOBFINDER_ADMIN_TOKEN>` on the live site:
+every table and function should say `ok`. Without the token, or with none set in Vercel,
+it answers 404.
 
 ---
 
@@ -258,8 +259,9 @@ Or wait up to two hours for `crawl.yml`, which deploys at the end of every run.
 
 ## If something is wrong
 
-**`/healthz`** reports how the deployment resolved its data — useful for confirming the
-function is serving the snapshot as expected.
+**`/healthz`** says `{"ok": true}` when the snapshot was found, for an uptime check. With
+`?token=<JOBFINDER_ADMIN_TOKEN>` it reports how the deployment resolved its data, useful
+for confirming the function is serving the snapshot as expected.
 
 | Symptom | Cause |
 |---|---|

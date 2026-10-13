@@ -123,7 +123,19 @@ if PUBLIC_DEPLOYMENT and settings.session_secret == "dev-only-change-me":
         "project's environment variables before deploying."
     )
 
-app = FastAPI(title="Sorted Place", lifespan=lifespan)
+# No /docs, /redoc or /openapi.json: the site is pages, not a public API, and a listing
+# of every route and parameter helps nobody but someone probing it.
+app = FastAPI(title="Sorted Place", lifespan=lifespan,
+              docs_url=None, redoc_url=None, openapi_url=None)
+
+
+def owner_only(request: Request) -> bool:
+    """Whether to show the owner's diagnostics: always locally; on the public site only
+    with `?token=` matching JOBFINDER_ADMIN_TOKEN, and never when that is unset."""
+    if not PUBLIC_DEPLOYMENT:
+        return True
+    given = request.query_params.get("token", "")
+    return bool(settings.admin_token) and hmac.compare_digest(given, settings.admin_token)
 
 # Everything a signed-out visitor may still reach. Privacy is on the list deliberately:
 # someone has to be able to read what an account will store about them *before* being
@@ -3781,13 +3793,15 @@ def company_jobs(request: Request, company_id: int):
 
 
 @app.get("/healthz/accounts", include_in_schema=False)
-def healthz_accounts():
+def healthz_accounts(request: Request):
     """Is the accounts side set up? Which tables exist.
 
     Names only, never keys. Added because "could not be saved" on the profile could mean
     a missing table, a paused project or a bad key, and only this can tell them apart
-    from outside.
+    from outside. The owner's alone on the public site (see `owner_only`).
     """
+    if not owner_only(request):
+        raise HTTPException(status_code=404)
     info: dict = {"supabase_configured": supabase.configured()}
     if supabase.configured():
         info["tables"] = supabase.table_status(

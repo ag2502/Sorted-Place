@@ -1764,3 +1764,44 @@ def test_every_response_carries_the_security_headers(client):
         assert headers["x-frame-options"] == "DENY"
         assert headers["x-content-type-options"] == "nosniff"
         assert headers["referrer-policy"] == "strict-origin-when-cross-origin"
+
+
+def test_the_api_docs_are_not_served(client):
+    for path in ("/docs", "/redoc", "/openapi.json"):
+        assert client.get(path).status_code == 404
+
+
+def test_diagnostics_need_the_admin_token_on_a_public_deployment(client, monkeypatch):
+    """They name the server's paths and the database functions; the owner's alone."""
+    from jobfinder.core.config import settings
+    from jobfinder.web import app as web_app
+
+    monkeypatch.setattr(web_app, "PUBLIC_DEPLOYMENT", True)
+    monkeypatch.setattr(settings, "admin_token", "")
+    assert client.get("/healthz/accounts").status_code == 404
+    assert client.get("/healthz/accounts?token=").status_code == 404
+
+    monkeypatch.setattr(settings, "admin_token", "s3cret-token")
+    assert client.get("/healthz/accounts?token=wrong").status_code == 404
+    assert client.get("/healthz/accounts?token=s3cret-token").status_code == 200
+
+
+def test_the_public_health_check_says_only_whether_it_is_up(monkeypatch):
+    import importlib.util
+    from pathlib import Path
+
+    from jobfinder.core.config import settings
+    from jobfinder.web import app as web_app
+
+    # Importing the entry point sets the database URL; put it back afterwards.
+    import os
+    monkeypatch.setenv("JOBFINDER_DATABASE_URL", os.environ.get("JOBFINDER_DATABASE_URL", ""))
+    spec = importlib.util.spec_from_file_location(
+        "vercel_entry", Path(__file__).resolve().parents[1] / "api" / "index.py")
+    entry = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(entry)
+    with TestClient(entry.app) as c:
+        monkeypatch.setattr(web_app, "PUBLIC_DEPLOYMENT", True)
+        monkeypatch.setattr(settings, "admin_token", "s3cret-token")
+        assert set(c.get("/healthz").json()) == {"ok"}
+        assert "snapshot_path" in c.get("/healthz?token=s3cret-token").json()
