@@ -448,7 +448,7 @@ Two GitHub Actions workflows, split by how fast the data underneath each one mov
 | Workflow | Schedule | Does |
 |---|---|---|
 | `crawl.yml` | every hour | tests, then fetch and reconcile every source that is due |
-| `registry.yml` | weekly | import companies, detect their ATS, try generic extraction |
+| `registry.yml` | nightly | import companies, detect their ATS, try generic extraction |
 
 The split is the point. Detection sweeps a few hundred unknown hosts, takes 30-60
 minutes, and typically registers a handful of new sources — because a company's website

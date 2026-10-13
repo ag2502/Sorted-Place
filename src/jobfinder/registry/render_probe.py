@@ -14,7 +14,7 @@ from then on it is crawled over its public API by plain HTTP.
 ## Why the browser never enters the crawl
 
 A browser is slow, heavy and fragile, and the hourly crawl is none of those. So the
-browser is used only to *discover* where a site's jobs come from, weekly, in the registry
+browser is used only to *discover* where a site's jobs come from, nightly, in the registry
 job; what it discovers is always a board the crawler can read without one. Reading job
 lists straight out of arbitrary JSON responses was tried against the blocked queue and
 rejected: nearly everything a careers page fetches is a menu, a form or a feature flag,
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 PAGE_TIMEOUT_MS = 25_000
 SETTLE_MS = 1_500
 # A hard ceiling per page, past navigation's own timeout: a page can hang in `content()`
-# or `close()` as well, and one stuck tab must not hold the weekly job.
+# or `close()` as well, and one stuck tab must not hold the nightly job.
 PAGE_DEADLINE_SECONDS = 60
 CONCURRENCY = 6
 COMMIT_EVERY = 25

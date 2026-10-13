@@ -4,7 +4,7 @@ name: Crawl
 # — because that is the only part of the pipeline whose underlying data changes hourly.
 #
 # Growing the registry (import, detection, extraction) lives in `registry.yml` on a
-# weekly schedule. Splitting them matters: detection takes 30-60 minutes across a few
+# nightly schedule. Splitting them matters: detection takes 30-60 minutes across a few
 # hundred unknown hosts and almost never finds anything new, so running it four times a
 # day spent most of the CI budget re-confirming what was already known and pushed this
 # job toward its timeout for no benefit.
@@ -89,7 +89,7 @@ jobs:
           JOBFINDER_DATABASE_URL: ${{ env.STATE_DB_URL }}
         # Seeding adds any source in data/seed_companies.csv that the state lacks and
         # never touches one it has, so it takes about a second and is safe every run.
-        # Leaving it to the weekly registry run meant a board added to the file waited
+        # Leaving it to the registry run, weekly then, meant a board added to the file waited
         # up to a week, and when the state was reset on 2026-09-25, 143 curated sources
         # (Microsoft, Salesforce, SAP, AIB, ESB among them) stayed missing for days.
         run: jobfinder seed

@@ -3,11 +3,13 @@ name: Registry
 # Growing the registry: import companies, resolve them to crawlable sources, and try
 # generic extraction on whatever detection could not read.
 #
-# Weekly, not hourly, because this is the slow half of the pipeline and the data it
+# Daily, not hourly, because this is the slow half of the pipeline and the data it
 # reads barely moves. A company's website and choice of ATS change on a scale of months;
 # its job postings change hourly. Detection across a few hundred unknown hosts takes
 # 30-60 minutes and typically registers a handful of new sources, so running it four
-# times a day was almost entirely re-confirming what was already known.
+# times a day was almost entirely re-confirming what was already known. Weekly was too
+# slow the other way: a company that moved boards or a newly imported employer waited
+# up to seven days to be crawled.
 #
 # This workflow never triggers a crawl. New sources are registered with
 # `last_success_at = NULL`, which `select_sources` treats as always due, so the next
@@ -15,8 +17,10 @@ name: Registry
 
 on:
   schedule:
-    # Sunday 02:00 UTC - off-peak, and a full day before the working week starts.
-    - cron: "41 2 * * 0"
+    # 02:41 UTC every night. It holds the shared database for up to an hour and the
+    # crawl waits behind it, so it runs while few people are searching. Off the hour
+    # because GitHub drops queued schedules at its busiest minute (see crawl.yml).
+    - cron: "41 2 * * *"
   workflow_dispatch:
     inputs:
       limit:
@@ -78,7 +82,7 @@ jobs:
 
       # Everything below is allowed to fail without failing the run. None of it closes
       # jobs or alters existing sources — the worst case is that the registry grows more
-      # slowly this week — and a detection outage is not a reason to mark the run red.
+      # slowly today — and a detection outage is not a reason to mark the run red.
       - name: Resolve companies to sources
         continue-on-error: true
         run: |
@@ -94,7 +98,7 @@ jobs:
         run: jobfinder extract-blocked
 
       # Browser-assisted detection: render the careers pages still blocked after
-      # extraction and read which job board their scripts load. Only here, weekly - the
+      # extraction and read which job board their scripts load. Only here, nightly - the
       # crawl never starts a browser, because what this finds is always a board it can
       # read over plain HTTP. Chromium is cached between runs.
       - name: Cache the headless browser
@@ -113,7 +117,7 @@ jobs:
           jobfinder render-blocked
 
       - name: Publish the crawler state
-        # After the detection passes, so a week's newly resolved sources are kept, but
+        # After the detection passes, so the night's newly resolved sources are kept, but
         # still gated on success: the import above is the step that must not be published
         # half-done. Detection and extraction are `continue-on-error` and only ever add
         # sources, so whatever they managed is worth keeping.
