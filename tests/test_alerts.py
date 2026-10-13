@@ -39,12 +39,17 @@ def test_new_means_first_seen_since_and_not_an_old_advert_newly_read():
 
 
 def test_the_subject_says_what_is_new():
-    s = lambda n, noun: SimpleNamespace(count=n, noun=noun)
+    s = lambda n, noun, at="": SimpleNamespace(count=n, noun=noun, at=at)
     assert digest.subject([s(1, "internship")]) == "1 new internship in Ireland"
     assert digest.subject([s(3, "graduate programme"), s(12, "job")]) == \
         "3 new graduate programmes and 12 new jobs in Ireland"
     assert digest.subject([s(5, "part-time job"), s(1, "job")]) == \
         "5 new part-time jobs and 1 new job in Ireland"
+    assert digest.subject([s(2, "internship"), s(3, "job", "Stripe")]) == \
+        "2 new internships and 3 new jobs at Stripe in Ireland"
+    # Several followed companies are counted together, or the subject runs off the screen.
+    assert digest.subject([s(1, "job", "Stripe"), s(2, "job", "Intel")]) == \
+        "3 new jobs at companies you follow in Ireland"
 
 
 def test_a_part_time_alert_is_the_sites_part_time_search_and_needs_no_fields(monkeypatch):
@@ -70,7 +75,49 @@ def test_subscribers_still_load_before_the_part_time_column_exists(monkeypatch):
 
     monkeypatch.setattr(service, "_get", get)
     assert len(service.subscribers()) == 1
-    assert asked[-1] == "(internships.eq.true,graduate.eq.true,jobs.eq.true)"
+    assert asked[-1] == "(internships.eq.true,graduate.eq.true,jobs.eq.true,companies.neq.{})"
+
+
+def test_subscribers_include_followers_and_load_before_the_companies_column_exists(monkeypatch):
+    asked = []
+
+    def get(path, params):
+        asked.append(params["or"])
+        if "companies" in params["or"]:
+            raise service.ServiceError("alerts: HTTP 400 column alerts.companies does not exist")
+        return [_row(graduate=True)]
+
+    monkeypatch.setattr(service, "_get", get)
+    assert len(service.subscribers()) == 1
+    assert "companies.neq.{}" in asked[0]
+    assert asked[-1] == "(internships.eq.true,graduate.eq.true,part_time.eq.true,jobs.eq.true)"
+
+
+def test_a_followed_company_lists_its_new_jobs_in_ireland_internships_and_all():
+    from sqlalchemy import func, select
+
+    from jobfinder.core.db import session_scope
+    from jobfinder.core.models import Company, JobPosting
+    from jobfinder.web.app import _in_ireland, _is_offerable
+
+    with session_scope() as session:
+        found = session.execute(
+            select(Company.name, func.count()).join(JobPosting, JobPosting.company_id == Company.id)
+            .where(_is_offerable(), _in_ireland(), JobPosting.posted_at.is_(None))
+            .group_by(Company.name).order_by(func.count().desc()).limit(1)
+        ).first()
+    if found is None:
+        pytest.skip("no jobs in this database")
+    name, undated = found
+    since = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    sections = digest.sections_for(_row(companies=[name, "Nobody Hiring Ltd"]), {}, since)
+    assert [s.key for s in sections] == [f"company:{name}"]
+    section = sections[0]
+    assert section.heading == f"New at {name}" and section.at == name
+    assert len(section.items) >= undated and {i["company"] for i in section.items} == {name}
+    assert section.more_url.startswith(settings.site_url) and "/companies?open=" in section.more_url
+    # Nothing first seen after now, so nothing to send.
+    assert digest.sections_for(_row(companies=[name]), {}, datetime.now(timezone.utc)) == []
 
 
 def test_sections_list_new_jobs_once_from_the_sites_own_search():

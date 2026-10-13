@@ -1,0 +1,34 @@
+{# Follow one company: its new jobs come in the alerts email, on the same schedule.
+   Signed out it is a way in to sign in. Signed in, the job panel and the company window
+   do not know yet whether the account follows it, so they ask (`following` is none)
+   rather than hold up the panel on a call to the accounts database. The POST handlers
+   send this fragment back. Needs `co` (the name the site shows) and `back`. #}
+<span class="follow">
+  {%- if accounts_enabled %}
+    {%- if not account %}
+    <a class="followbtn" href="/login?next={{ back|urlencode }}&amp;why=follow"
+       title="Sign in, and we will email you when {{ co }} posts a new job">
+      <svg aria-hidden="true"><use href="#i-plus"/></svg>Follow</a>
+    {%- elif following is none %}
+    <span class="followbtn is-wait" aria-hidden="true"
+          hx-get="/follow?company={{ co|urlencode }}&amp;back={{ back|urlencode }}" hx-trigger="load"
+          hx-target="closest .follow" hx-swap="outerHTML"><svg><use href="#i-plus"/></svg>Follow</span>
+    {%- else %}
+    <form method="post" action="/follow{{ '/remove' if following else '' }}"
+          hx-post="/follow{{ '/remove' if following else '' }}" hx-target="closest .follow" hx-swap="outerHTML">
+      <input type="hidden" name="company" value="{{ co }}">
+      <input type="hidden" name="back" value="{{ back }}">
+      {%- if following %}
+      <button type="submit" class="followbtn is-on" aria-pressed="true"
+              title="We email you when {{ co }} posts a new job. Press to stop.">
+        <svg aria-hidden="true"><use href="#i-check"/></svg>Following</button>
+      {%- else %}
+      <button type="submit" class="followbtn" aria-pressed="false"
+              title="Email me when {{ co }} posts a new job">
+        <svg aria-hidden="true"><use href="#i-plus"/></svg>Follow</button>
+      {%- endif %}
+    </form>
+    {%- endif %}
+  {%- endif %}
+  {%- if note %}<span class="follow__note{% if note_bad %} follow__note--bad{% endif %}" role="status">{{ note }}</span>{% endif %}
+</span>

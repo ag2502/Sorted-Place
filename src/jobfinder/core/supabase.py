@@ -605,6 +605,17 @@ def save_alerts(account: Account, **columns) -> None:
         raise SupabaseError(_message_from(response))
 
 
+def followed_companies(account: Account) -> list[str]:
+    """The companies this account follows, in the order it followed them."""
+    return list((get_alerts(account) or {}).get("companies") or [])
+
+
+def save_followed_companies(account: Account, names: list[str]) -> None:
+    """Replace the followed list. The other alert settings are left as they are, and an
+    account with none yet gets the table's defaults: daily, nothing else on."""
+    save_alerts(account, companies=names)
+
+
 def unsubscribe(token: str) -> None:
     """Turn off every alert for the account this email token belongs to.
 

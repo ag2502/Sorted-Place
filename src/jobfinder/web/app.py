@@ -2446,7 +2446,7 @@ def _safe_next(value: str | None) -> str:
 # Why sign-in was asked for, when it interrupted an Apply or a Save. It only changes
 # the heading to "One step first."; an explanation box above the Google button was
 # judged unnecessary, and the lede already says what an account is for.
-REASONS = frozenset({"apply", "save", "remind"})
+REASONS = frozenset({"apply", "save", "remind", "follow"})
 
 
 def _auth_page(request: Request, *, mode: str, error: str = "", notice: str = "",
@@ -2790,6 +2790,9 @@ def _alerts_view(row: dict | None) -> dict:
         "frequency": row.get("frequency") if row.get("frequency") in ALERT_FREQUENCIES else "daily",
         "kinds": kinds,
         "any": bool(kinds),
+        # Each linked to its window of open jobs.
+        "companies": [{"name": name, "href": href}
+                      for name, href in company_links(row.get("companies") or []).items()],
     }
 
 
@@ -3827,11 +3830,123 @@ def company_jobs(request: Request, company_id: int):
         ]
         name = company.name
         domain = _logo_domain(company.name, company.website)
-    return templates.TemplateResponse(
-        request,
-        "_company_jobs.html",
-        {"request": request, "name": name, "domain": domain, "jobs": rows},
-    )
+    context = _base_context(request)
+    context.update(name=name, domain=domain, jobs=rows, back=f"/companies?open={company_id}")
+    return templates.TemplateResponse(request, "_company_jobs.html", context)
+
+
+def company_links(names: list[str]) -> dict[str, str]:
+    """Where each named company's open jobs are: its window on /companies, which opens
+    on arrival. The alerts email links there too."""
+    if not names:
+        return {}
+    with session_scope() as session:
+        ids = dict(session.execute(
+            select(Company.name, func.min(Company.id)).where(Company.name.in_(names))
+            .group_by(Company.name)
+        ).all())
+    return {name: f"/companies?open={ids[name]}" if name in ids else "/companies" for name in names}
+
+
+# Enough for anyone watching a shortlist of employers, and a bound on how long one
+# subscriber's email can grow.
+MAX_FOLLOWED = 25
+
+
+def _follow_control(request: Request, co: str, back: str, following: bool | None,
+                    note: str = "", bad: bool = False):
+    context = _base_context(request)
+    context.update(co=co, back=back, following=following, note=note, note_bad=bad)
+    return templates.TemplateResponse(request, "_follow.html", context)
+
+
+def _company_named(name: str) -> str | None:
+    """The name as the site shows it, if any company has it: only those can be followed."""
+    name = " ".join(name.split())[:200]
+    if not name:
+        return None
+    with session_scope() as session:
+        return session.scalar(select(Company.name).where(Company.name == name).limit(1))
+
+
+def _follow_done(request: Request, back: str, profile: bool):
+    """Where a Follow press ends up without htmx: back where it came from."""
+    return RedirectResponse("/profile#following" if profile else _safe_next(back), status_code=303)
+
+
+@app.get("/follow", response_class=HTMLResponse)
+def follow_state(request: Request, company: str = "", back: str = "/"):
+    """Follow or Following, for the control that asks once its panel has opened."""
+    back = _safe_next(back)
+    account = _account(request)
+    if account is None:
+        return _follow_control(request, company, back, None)
+    try:
+        following = company in supabase.followed_companies(account)
+    except (supabase.SupabaseError, httpx.HTTPError):
+        logger.warning("could not read followed companies", exc_info=True)
+        following = False
+    return _follow_control(request, company, back, following)
+
+
+@app.post("/follow", response_class=HTMLResponse)
+def follow(request: Request, company: str = Form(default=""), back: str = Form(default="/")):
+    """Follow a company: its new jobs in Ireland come in the alerts email."""
+    back = _safe_next(back)
+    account = _account(request)
+    if account is None:
+        login = f"/login?next={quote(back, safe='/')}&why=follow"
+        if request.headers.get("HX-Request"):
+            return Response(status_code=204, headers={"HX-Redirect": login})
+        return RedirectResponse(login, status_code=303)
+    name = _company_named(company)
+    if name is None:
+        return _follow_control(request, company, back, False, "We do not list that company.", True)
+    try:
+        names = supabase.followed_companies(account)
+        if name not in names:
+            if len(names) >= MAX_FOLLOWED:
+                return _follow_control(
+                    request, name, back, False,
+                    f"You follow {MAX_FOLLOWED} already. Unfollow one on your profile first.", True)
+            supabase.save_followed_companies(account, [*names, name])
+    except supabase.SupabaseError as exc:
+        # `companies` arrived after the table did, and needs schema.sql re-run in Supabase.
+        logger.warning("could not follow a company", exc_info=True)
+        text = ("Following companies is not available just yet." if "companies" in str(exc)
+                else "Could not follow just now. Please try again.")
+        return _follow_control(request, name, back, False, text, True)
+    except httpx.HTTPError:
+        logger.warning("could not follow a company", exc_info=True)
+        return _follow_control(request, name, back, False, "Could not follow just now. Please try again.", True)
+    if not request.headers.get("HX-Request"):
+        return _follow_done(request, back, False)
+    return _follow_control(request, name, back, True, f"We will email you when {name} posts a new job.")
+
+
+@app.post("/follow/remove", response_class=HTMLResponse)
+def unfollow(request: Request, company: str = Form(default=""), back: str = Form(default="/"),
+             where: str = Form(default="")):
+    """Stop following a company, from its Following button or the profile's list."""
+    back = _safe_next(back)
+    profile = where == "profile"
+    account = _account(request)
+    if account is None:
+        return PlainTextResponse("Sign in to continue.", status_code=401)
+    try:
+        names = supabase.followed_companies(account)
+        if company in names:
+            supabase.save_followed_companies(account, [n for n in names if n != company])
+    except (supabase.SupabaseError, httpx.HTTPError):
+        logger.warning("could not unfollow a company", exc_info=True)
+        if profile:
+            return HTMLResponse('<span class="savednote savednote--bad" role="status">Could not unfollow. Try again.</span>')
+        return _follow_control(request, company, back, True, "Could not unfollow just now. Please try again.", True)
+    if not request.headers.get("HX-Request"):
+        return _follow_done(request, back, profile)
+    if profile:
+        return HTMLResponse("")
+    return _follow_control(request, company, back, False)
 
 
 @app.get("/healthz/accounts", include_in_schema=False)

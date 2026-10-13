@@ -1,11 +1,12 @@
 {% from "_macros.html" import logo %}
 {# The inside of a company's window on /companies: every open job in Ireland it has, each
-   linking to the company's own posting. #}
+   linking to the company's own posting, and Follow for an email when it posts another. #}
 <div class="cj__head">
   {{ logo(name, domain, "logo--lg") }}
   <div>
     <h3>{{ name }}</h3>
     <p>{{ jobs|length }} job{{ "" if jobs|length == 1 else "s" }} open in Ireland</p>
+    {% with co=name, following=none %}{% include "_follow.html" %}{% endwith %}
   </div>
 </div>
 {% if jobs %}

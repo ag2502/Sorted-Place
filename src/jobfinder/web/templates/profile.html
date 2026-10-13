@@ -259,7 +259,9 @@
             {% if alerts_unavailable %}
               Not available just yet.
             {% elif alerts.any %}
-              On: {{ alerts.kinds|join(", ") }}, {{ alerts.frequency }}, to {{ account.email }}.
+              On: {{ alerts.kinds|join(", ") }}{% if alerts.companies %}, and {{ alerts.companies|length }} compan{{ "y" if alerts.companies|length == 1 else "ies" }} you follow{% endif %}, {{ alerts.frequency }}, to {{ account.email }}.
+            {% elif alerts.companies %}
+              On for {{ alerts.companies|length }} compan{{ "y" if alerts.companies|length == 1 else "ies" }} you follow, {{ alerts.frequency }}, to {{ account.email }}.
             {% else %}
               Off. Get new internships, graduate programmes, part-time jobs or jobs in your fields by email.
             {% endif %}
@@ -273,7 +275,8 @@
       <form class="about" method="post" action="/profile/alerts"
             hx-post="/profile/alerts" hx-target="#alerts-status" hx-swap="innerHTML">
         <p class="muted alerts__lede">We email {{ account.email }} only for what you tick, and only
-          when something new has opened since the last email. Every email has a link to stop them.</p>
+          when something new has opened since the last email. Every email has a link to stop them.
+          To hear from one employer, press Follow beside its name on any of its jobs.</p>
         <div class="about__block about__switches alerts__kinds">
           <label class="switch">
             <input type="checkbox" name="internships" value="1" {% if alerts.internships %}checked{% endif %}>
@@ -315,6 +318,30 @@
       {% endif %}
     </details>
   </section>
+
+  {# The companies this account follows: each one's new jobs come in the alerts email. #}
+  {% if alerts.companies and not alerts_unavailable %}
+  <section class="win aboutwin opens" id="following" aria-labelledby="following-title">
+    {{ titlebar("following") }}
+    <div class="remlist">
+      <p class="remlist__head"><b id="following-title">Companies you follow</b>
+        <span class="muted small">Their new jobs come in your {{ alerts.frequency }} email to {{ account.email }}.</span></p>
+      <ul>
+        {% for c in alerts.companies %}
+        <li class="remlist__row remlist__row--two">
+          <a href="{{ c.href|link }}">{{ c.name }}</a>
+          <form method="post" action="/follow/remove" hx-post="/follow/remove" hx-target="closest li" hx-swap="outerHTML">
+            <input type="hidden" name="company" value="{{ c.name }}">
+            <input type="hidden" name="where" value="profile">
+            <button type="submit" class="linkish">Unfollow</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      <a class="linkish" href="/companies">See every company</a>
+    </div>
+  </section>
+  {% endif %}
 
   {# The careers events this account pressed Remind me on, while they are still to come. #}
   {% if event_reminders %}
@@ -698,6 +725,7 @@
     padding:10px 0;border-top:1px solid var(--line);font-size:14.5px}
   .remlist__row a{color:var(--ink);font-weight:600;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .remlist__row a:hover{color:var(--aqua-deep)}
+  .remlist__row.remlist__row--two{grid-template-columns:minmax(0,1fr) auto}
   .remlist__freq{font-size:12.5px;font-weight:650;padding:3px 9px;border-radius:999px;background:var(--brass-bg);color:var(--brass-ink)}
   @media (max-width:860px){
     .remlist{padding:16px 16px 18px}

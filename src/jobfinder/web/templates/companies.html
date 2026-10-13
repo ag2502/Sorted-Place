@@ -311,6 +311,8 @@
   .popwin__loading{display:flex;align-items:center;gap:12px;padding:28px 22px;color:var(--ink-2)}
   .cj__head{display:flex;align-items:center;gap:14px;padding:20px 22px 16px;border-bottom:1px solid var(--line)}
   .cj__head h3{margin:0;font-size:1.2rem}
+  .cj__head > div{flex:1;min-width:0}
+  .cj__head .follow{margin-top:8px}
   .cj__head p{margin:0;font-size:13.5px;color:var(--sorted);font-weight:600}
   .cj__list{list-style:none;margin:0;padding:0}
   .cj__list a{display:block;padding:11px 22px;border-bottom:1px solid var(--line);text-decoration:none;
@@ -526,6 +528,7 @@
       .then(function (res) { if (!res.ok) throw new Error(res.status); return res.text(); })
       .then(function (html) {
         win.querySelector('.popwin__body').innerHTML = html;
+        if (window.htmx) htmx.process(win.querySelector('.popwin__body'));
         if (deck[0] === win) win.focus({ preventScroll: true });
       })
       .catch(function () {

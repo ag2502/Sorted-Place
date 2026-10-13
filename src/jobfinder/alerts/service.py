@@ -45,17 +45,20 @@ def _get(path: str, params: dict) -> list[dict]:
 
 
 def subscribers() -> list[dict]:
-    """Every account with at least one alert on."""
-    kinds = "internships.eq.true,graduate.eq.true,part_time.eq.true,jobs.eq.true"
-    try:
-        return _get("alerts", {"select": "*", "or": f"({kinds})", "limit": "5000"})
-    except ServiceError as exc:
-        # `part_time` arrived after the table did, and needs schema.sql re-run in
-        # Supabase. Until it is, every other alert still goes out.
-        if "part_time" not in str(exc):
-            raise
-        kinds = kinds.replace("part_time.eq.true,", "")
-        return _get("alerts", {"select": "*", "or": f"({kinds})", "limit": "5000"})
+    """Every account with at least one alert on, or a company followed."""
+    kinds = {"internships": "eq.true", "graduate": "eq.true", "part_time": "eq.true",
+             "jobs": "eq.true", "companies": "neq.{}"}
+    while True:
+        test = ",".join(f"{column}.{rule}" for column, rule in kinds.items())
+        try:
+            return _get("alerts", {"select": "*", "or": f"({test})", "limit": "5000"})
+        except ServiceError as exc:
+            # `part_time` and `companies` arrived after the table did, and need
+            # schema.sql re-run in Supabase. Until it is, every other alert still goes out.
+            missing = next((c for c in ("companies", "part_time") if c in kinds and c in str(exc)), None)
+            if missing is None:
+                raise
+            del kinds[missing]
 
 
 def profiles(user_ids: list[str]) -> dict[str, dict]:

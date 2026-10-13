@@ -15,6 +15,6 @@ See all {{ section.count }}: {{ section.more_url }}
 {% endif %}
 {% endfor %}
 
-You get this {{ "daily" if frequency == "daily" else "weekly" }} email because you turned on alerts on your Sorted Place profile, and only when something new has opened.
+You get this {{ "daily" if frequency == "daily" else "weekly" }} email because you turned on alerts or followed a company on Sorted Place, and only when something new has opened.
 Change your alerts: {{ manage }}
 Stop all alerts: {{ unsubscribe }}

@@ -7,7 +7,8 @@
   <header class="jobx__head">
     {{ logo(company, domain, "logo--lg") }}
     <div class="jobx__who">
-      <p class="jobx__employer">{{ company }}</p>
+      <p class="jobx__employer">{{ company }}
+        {%- if company != "Unknown" %}{% with co=company, back="/jobs/" ~ job.id, following=none %}{% include "_follow.html" %}{% endwith %}{% endif %}</p>
       <h2 class="jobx__title" id="jobx-title">{{ job.title }}</h2>
     </div>
   </header>

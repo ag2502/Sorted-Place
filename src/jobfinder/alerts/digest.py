@@ -10,7 +10,9 @@ week of it. The second rule is what stops a newly crawled employer, whose advert
 all "first seen" today, from arriving as a flood of months-old roles.
 
 The matching is the site's own search (`web.app._search_results`), so an alert never
-lists a job that the same search on the site would not.
+lists a job that the same search on the site would not. A followed company is the
+exception: its section is every new job it has in Ireland, as its window on /companies
+lists them, internships and all.
 """
 
 from __future__ import annotations
@@ -54,6 +56,7 @@ class Section:
     noun: str            # "internship", "graduate programme", "part-time job", "job"
     items: list[dict]
     more_url: str
+    at: str = ""         # the company, for a followed one: "3 new jobs at Stripe"
 
     @property
     def count(self) -> int:
@@ -114,11 +117,46 @@ def _section(key: str, heading: str, noun: str, profile: dict, since: datetime) 
     return Section(key, heading, noun, items, link)
 
 
+def _company_sections(names: list[str], since: datetime) -> list[Section]:
+    """One section per followed company with something new, in the order followed."""
+    from jobfinder.web.app import (
+        Company, JobPosting, _experience_label, _facts_for, _in_ireland, _is_offerable,
+        _place_label, company_links, session_scope,
+    )
+    from sqlalchemy import select
+
+    if not names:
+        return []
+    by_name: dict[str, list[dict]] = {name: [] for name in names}
+    with session_scope() as session:
+        rows = session.execute(
+            select(JobPosting, Company.name)
+            .join(Company, Company.id == JobPosting.company_id)
+            .where(Company.name.in_(names), _is_offerable(), _in_ireland(),
+                   JobPosting.first_seen_at > since.replace(tzinfo=None))
+            .order_by(JobPosting.first_seen_at.desc())
+        ).all()
+        for job, name in rows:
+            stated = _facts_for(job)
+            by_name[name].append({
+                "job": job, "company": name, "salary": stated["salary"],
+                "mode": stated["mode"], "experience": _experience_label(job),
+                "place": _place_label(job),
+            })
+    site = settings.site_url.rstrip("/")
+    links = company_links(names)
+    return [
+        Section(f"company:{name}", f"New at {name}", "job",
+                [i for i in items if _is_new(i, since)], site + links[name], at=name)
+        for name, items in by_name.items()
+    ]
+
+
 def sections_for(row: dict, profile: dict | None, since: datetime) -> list[Section]:
     """What this subscriber asked for, each with the jobs new since `since`.
 
-    A job appearing in two sections (a graduate programme in the searcher's own field)
-    is listed once, in the first.
+    A job appearing in two sections (a graduate programme in the searcher's own field,
+    or a followed company's job in it) is listed once, in the first.
     """
     profile = profile or {}
     fields = [f for f in (profile.get("fields") or [])]
@@ -139,6 +177,7 @@ def sections_for(row: dict, profile: dict | None, since: datetime) -> list[Secti
             "fields": fields, "years": profile.get("years"),
             "include_remote": bool(profile.get("include_remote")),
         }, since))
+    out.extend(_company_sections(list(row.get("companies") or []), since))
     seen: set[int] = set()
     for section in out:
         section.items = [i for i in section.items if i["job"].id not in seen]
@@ -146,14 +185,21 @@ def sections_for(row: dict, profile: dict | None, since: datetime) -> list[Secti
     return [s for s in out if s.items]
 
 
-def _plural(n: int, noun: str) -> str:
+def _plural(n: int, noun: str, at: str = "") -> str:
+    where = f" at {at}" if at else ""
     if n == 1:
-        return f"1 new {noun}"
-    return f"{n} new " + ("graduate programmes" if noun == "graduate programme" else noun + "s")
+        return f"1 new {noun}{where}"
+    return f"{n} new " + ("graduate programmes" if noun == "graduate programme" else noun + "s") + where
 
 
 def subject(sections: list[Section]) -> str:
-    parts = [_plural(s.count, s.noun) for s in sections]
+    parts = [_plural(s.count, s.noun) for s in sections if not s.at]
+    followed = [s for s in sections if s.at]
+    if len(followed) == 1:
+        parts.append(_plural(followed[0].count, "job", followed[0].at))
+    elif followed:
+        # Named one by one, five followed companies would run past what a subject shows.
+        parts.append(_plural(sum(s.count for s in followed), "job", "companies you follow"))
     joined = parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
     return joined[0].upper() + joined[1:] + " in Ireland"
 

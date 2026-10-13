@@ -1550,6 +1550,89 @@ def test_the_unsubscribe_link_asks_first_then_stops_everything(client: TestClien
     assert client.post("/alerts/unsubscribe", data={"token": "not-a-token"}).status_code == 400
 
 
+# ------------------------------------------------------------- following a company
+
+
+def _hiring_company() -> tuple[int, str]:
+    from sqlalchemy import select
+
+    from jobfinder.core.db import session_scope
+    from jobfinder.core.models import Company, JobPosting
+    from jobfinder.web.app import _in_ireland, _is_offerable
+
+    with session_scope() as session:
+        row = session.execute(
+            select(Company.id, Company.name).join(JobPosting, JobPosting.company_id == Company.id)
+            .where(_is_offerable(), _in_ireland()).limit(1)
+        ).first()
+    if row is None:
+        pytest.skip("no jobs in this database")
+    return row
+
+
+def test_following_a_company_adds_it_to_the_alerts_and_the_profile(client: TestClient, fake):
+    company_id, name = _hiring_company()
+    _signed_in(client)
+    window = client.get(f"/companies/{company_id}/jobs", headers={"HX-Request": "true"}).text
+    assert 'class="follow"' in window and 'hx-get="/follow?company=' in window
+
+    asked = client.get("/follow", params={"company": name, "back": f"/companies?open={company_id}"}).text
+    assert 'aria-pressed="false"' in asked and 'action="/follow"' in asked
+
+    done = client.post("/follow", data={"company": name, "back": "/companies"},
+                       headers={"HX-Request": "true"}).text
+    assert 'aria-pressed="true"' in done and f"when {name} posts a new job" in done.replace("&amp;", "&")
+    assert fake.alerts["companies"] == [name] and fake.alerts["email"] == "jane@example.com"
+    # Following twice keeps one.
+    client.post("/follow", data={"company": name}, headers={"HX-Request": "true"})
+    assert fake.alerts["companies"] == [name]
+    assert 'aria-pressed="true"' in client.get("/follow", params={"company": name}).text
+
+    page = client.get("/profile").text
+    assert 'id="following"' in page and f"/companies?open={company_id}" in page
+    assert "1 company you follow" in page
+
+    gone = client.post("/follow/remove", data={"company": name, "where": "profile"},
+                       headers={"HX-Request": "true"})
+    assert gone.text == "" and fake.alerts["companies"] == []
+    assert 'id="following"' not in client.get("/profile").text
+
+
+def test_only_a_listed_company_can_be_followed_and_only_so_many(client: TestClient, fake):
+    from jobfinder.web.app import MAX_FOLLOWED
+
+    _, name = _hiring_company()
+    _signed_in(client)
+    response = client.post("/follow", data={"company": "No Such Employer Ltd"}, headers={"HX-Request": "true"})
+    assert "We do not list that company" in response.text and fake.alerts is None
+    fake.alerts = {"companies": [f"Employer {n}" for n in range(MAX_FOLLOWED)]}
+    response = client.post("/follow", data={"company": name}, headers={"HX-Request": "true"})
+    assert f"You follow {MAX_FOLLOWED} already" in response.text
+    assert name not in fake.alerts["companies"]
+
+
+def test_follow_signed_out_is_a_way_in(client: TestClient, fake):
+    company_id, name = _hiring_company()
+    window = client.get(f"/companies/{company_id}/jobs", headers={"HX-Request": "true"}).text
+    assert f"/login?next=/companies%3Fopen%3D{company_id}&amp;why=follow" in window
+    response = client.post("/follow", data={"company": name, "back": "/jobs/1"},
+                           headers={"HX-Request": "true"})
+    assert response.headers["HX-Redirect"] == "/login?next=/jobs/1&why=follow"
+    assert "One step first" in client.get("/login?next=/jobs/1&why=follow").text
+
+
+def test_follow_before_the_column_exists_says_so(client: TestClient, fake, monkeypatch):
+    _, name = _hiring_company()
+    _signed_in(client)
+
+    def missing_column(account, **columns):
+        raise supabase.SupabaseError("Could not find the 'companies' column of 'alerts'")
+
+    monkeypatch.setattr(supabase, "save_alerts", missing_column)
+    response = client.post("/follow", data={"company": name}, headers={"HX-Request": "true"})
+    assert "not available just yet" in response.text and 'aria-pressed="false"' in response.text
+
+
 def test_a_fresh_application_stamps_itself_in(client: TestClient, fake):
     _signed_in(client)
     response = client.post("/applications", data={"advert_key": "b" * 32, "title": "Engineer",
