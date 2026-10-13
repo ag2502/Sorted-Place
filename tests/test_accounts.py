@@ -1630,3 +1630,11 @@ def test_only_the_signed_in_person_can_delete_themselves():
     block = schema.split("function public.delete_my_account()", 1)[1].split("$$;", 1)[0]
     assert "where id = auth.uid()" in block
     assert "grant execute on function public.delete_my_account() to authenticated;" in schema
+
+
+def test_a_failed_save_does_not_print_the_error_as_html(client: TestClient, fake):
+    _signed_in(client)
+    fake.fail_with = supabase.SupabaseError('bad "><img src=x onerror=alert(1)>')
+    response = client.post("/applications", data={"advert_key": "k", "title": "t"})
+    assert response.status_code == 502
+    assert "<img" not in response.text and "&lt;img" in response.text

@@ -241,7 +241,11 @@ async def _security_headers(request: Request, call_next):
 # Added last, so it wraps the middleware above: Starlette runs the most recently added
 # first, and `_require_account` reads `request.session`, which does not exist until this
 # one has run.
-app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
+app.add_middleware(
+    SessionMiddleware, secret_key=settings.session_secret, same_site="lax",
+    # The search profile it carries holds terms read from a CV; never over plain http.
+    https_only=PUBLIC_DEPLOYMENT,
+)
 templates = Jinja2Templates(directory=str(TEMPLATES))
 
 
@@ -3038,7 +3042,7 @@ def mark_applied(
     except (supabase.SupabaseError, httpx.HTTPError) as exc:
         logger.warning("could not record an application", exc_info=True)
         return HTMLResponse(
-            f'<span class="muted small" title="{exc}">could not save</span>',
+            f'<span class="muted small" title="{html_escape(str(exc))}">could not save</span>',
             status_code=502,
         )
 
@@ -3112,7 +3116,7 @@ def mark_saved(
     except (supabase.SupabaseError, httpx.HTTPError) as exc:
         logger.warning("could not save a job", exc_info=True)
         return HTMLResponse(
-            f'<span class="accession" title="{exc}">could not save</span>',
+            f'<span class="accession" title="{html_escape(str(exc))}">could not save</span>',
             status_code=502,
         )
 

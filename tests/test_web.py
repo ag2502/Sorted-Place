@@ -605,6 +605,23 @@ def test_a_public_deployment_refuses_to_start_with_the_default_session_secret(tm
     assert started.returncode == 0, started.stderr
 
 
+def test_a_public_deployment_sends_the_session_cookie_over_https_only(tmp_path):
+    """The session carries terms read from a CV, so it never travels over plain http."""
+    import os
+    import subprocess
+    import sys
+
+    env = {k: v for k, v in os.environ.items() if not k.startswith("JOBFINDER_")}
+    env.update(VERCEL="1", JOBFINDER_DATABASE_URL=f"sqlite:///{tmp_path / 'x.db'}",
+               JOBFINDER_SESSION_SECRET="a-long-random-production-secret")
+    probe = ("from jobfinder.web.app import app; "
+             "m = next(m for m in app.user_middleware if m.cls.__name__ == 'SessionMiddleware'); "
+             "print(m.kwargs['https_only'])")
+    run = subprocess.run([sys.executable, "-c", probe], cwd=tmp_path, env=env,
+                         capture_output=True, text=True)
+    assert run.stdout.strip() == "True", run.stderr
+
+
 def test_one_employer_spelled_three_ways_is_listed_once():
     """Regression: ByrneWallace's graduate advert appeared three times in the results.
 
