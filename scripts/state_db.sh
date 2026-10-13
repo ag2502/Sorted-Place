@@ -98,6 +98,21 @@ pull() {
   fi
 }
 
+# One asset, tried three times. A 230 MB upload fails now and then for no reason of
+# ours: on 2026-10-12 the spare went up and the main asset, deleted by --clobber, did
+# not, and the whole run stopped there with the site left unrefreshed.
+upload() {
+  local file="$1" attempt
+  for attempt in 1 2 3; do
+    if gh release upload "$TAG" "$file" --clobber; then
+      return 0
+    fi
+    echo "upload of $(basename "$file") failed (attempt $attempt)"
+    [ "$attempt" -lt 3 ] && sleep $((attempt * ${JOBFINDER_STATE_RETRY_SECONDS:-15}))
+  done
+  return 1
+}
+
 push() {
   if [ ! -f "$DB" ]; then
     echo "::error::no database at $DB to publish"
@@ -118,9 +133,18 @@ push() {
   local spare_dir
   spare_dir=$(mktemp -d)
   cp "$DB" "$spare_dir/$SPARE"
-  gh release upload "$TAG" "$spare_dir/$SPARE" --clobber
+  if ! upload "$spare_dir/$SPARE"; then
+    rm -rf "$spare_dir"
+    echo "::error::could not publish the state to release '$TAG'"
+    exit 1
+  fi
   rm -rf "$spare_dir"
-  gh release upload "$TAG" "$DB" --clobber
+  if ! upload "$DB"; then
+    # The spare holds this crawl, and `pull` restores from it when the main asset is
+    # missing, so nothing is lost: the run goes on to refresh the site.
+    echo "::warning::main state asset failed to upload; this crawl is kept in $SPARE"
+    return 0
+  fi
   echo "published state to release '$TAG' ($(du -h "$DB" | cut -f1))"
 }
 
