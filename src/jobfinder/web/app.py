@@ -206,6 +206,26 @@ async def _account_cookie(request: Request, call_next):
     return response
 
 
+# Sent with every response. The policy stops only what the site never does: being framed
+# by another site (where a hidden page could be clicked through), changing the base URL,
+# and plugins. Scripts are left alone, because the pages run their own inline.
+SECURITY_HEADERS = {
+    "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+}
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    return response
+
+
 # Added last, so it wraps the middleware above: Starlette runs the most recently added
 # first, and `_require_account` reads `request.session`, which does not exist until this
 # one has run.

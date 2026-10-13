@@ -1755,3 +1755,12 @@ def test_the_terms_are_one_click_away(client):
     page = client.get("/terms")
     assert page.status_code == 200 and "governed by the law of Ireland" in page.text
     assert 'href="/terms"' in client.get("/").text
+
+
+def test_every_response_carries_the_security_headers(client):
+    for path in ("/", "/privacy", "/no-such-page"):
+        headers = client.get(path).headers
+        assert "frame-ancestors 'none'" in headers["content-security-policy"]
+        assert headers["x-frame-options"] == "DENY"
+        assert headers["x-content-type-options"] == "nosniff"
+        assert headers["referrer-policy"] == "strict-origin-when-cross-origin"
