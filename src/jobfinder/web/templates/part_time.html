@@ -22,7 +22,7 @@
   </div>
   <div class="ptrow__act">
     {%- if j.applied %}<span class="stamp stamp--filled">Applied</span>
-    {%- elif account or not accounts_enabled %}<span class="applied-mark" data-advert="{{ j.advert_key }}"><a class="btn btn--apply" href="{{ j.url }}" target="_blank" rel="noopener"
+    {%- elif account or not accounts_enabled %}<span class="applied-mark" data-advert="{{ j.advert_key }}"><a class="btn btn--apply" href="{{ j.url|link }}" target="_blank" rel="noopener"
        {%- if account %} data-apply-later='{{ {"advert_key": j.advert_key, "title": j.title, "company": j.company, "url": j.url}|tojson }}'{% endif %}>Apply <svg width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg></a></span>
     {%- else %}<a class="btn btn--apply" href="/login?next={{ request.url.path|urlencode }}%3F{{ request.url.query|urlencode }}&amp;why=apply" title="Sign in first, so this job is recorded and never offered to you again">Apply <svg width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg></a>
     {%- endif -%}

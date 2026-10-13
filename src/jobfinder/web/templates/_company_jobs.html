@@ -12,7 +12,7 @@
 <ul class="cj__list">
   {% for j in jobs %}
   <li>
-    <a href="{{ j.url }}" target="_blank" rel="noopener">
+    <a href="{{ j.url|link }}" target="_blank" rel="noopener">
       <b>{{ j.title }}</b>
       <span>{{ j.location }}{% if j.experience %} &middot; {{ j.experience }}{% endif %}</span>
     </a>

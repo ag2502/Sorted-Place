@@ -27,6 +27,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from jobfinder.alerts import service
 from jobfinder.core.config import settings
+from jobfinder.web.links import safe_link
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ _env = Environment(
     autoescape=select_autoescape(["html"]),
     trim_blocks=True, lstrip_blocks=True,
 )
+_env.filters["link"] = safe_link
 
 
 @dataclass

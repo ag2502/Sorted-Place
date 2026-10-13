@@ -32,7 +32,7 @@
       {% if v.summary %}<p class="evpage__summary">{{ v.summary }}</p>{% endif %}
 
       <div class="evpage__acts">
-        <a class="btn" href="{{ v.event.url }}" target="_blank" rel="noopener">{{ "See it" if v.status == "done" else "Details and registration" }} on {{ v.source_label }}
+        <a class="btn" href="{{ v.event.url|link }}" target="_blank" rel="noopener">{{ "See it" if v.status == "done" else "Details and registration" }} on {{ v.source_label }}
           <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
         {% if v.status != "done" %}
         <a class="btn btn--ghost" href="/events/{{ v.id }}/calendar.ics"><svg width="16" height="16" aria-hidden="true"><use href="#e-cal"/></svg>Add to calendar</a>

@@ -22,7 +22,7 @@
       </div>
       {% endfor %}
       {% if section.count > shown %}
-      <p style="margin:6px 0 14px"><a href="{{ section.more_url }}" style="font-size:14px;font-weight:600;color:#1a55c2">See all {{ section.count }} on Sorted Place</a></p>
+      <p style="margin:6px 0 14px"><a href="{{ section.more_url|link }}" style="font-size:14px;font-weight:600;color:#1a55c2">See all {{ section.count }} on Sorted Place</a></p>
       {% endif %}
     </div>
     {% endfor %}

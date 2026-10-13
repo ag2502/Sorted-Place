@@ -26,7 +26,7 @@
               data-share-text="{{ job.title }} at {{ company }}, on Sorted Place"
               aria-label="Share this job"><svg aria-hidden="true"><use href="#i-share"/></svg>Share</button>
       <a class="btn btn--ghost" href="/#find">Find more jobs</a>
-      <a class="btn" href="{{ job.url }}" target="_blank" rel="noopener">Apply on {{ company }}'s site
+      <a class="btn" href="{{ job.url|link }}" target="_blank" rel="noopener">Apply on {{ company }}'s site
         <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
     </div>
   </div>

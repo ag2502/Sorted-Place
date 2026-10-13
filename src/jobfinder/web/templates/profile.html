@@ -83,7 +83,7 @@
           <div class="record__main">
             <span class="record__employer">{{ item.company }}</span>
             <h3 class="record__title">
-              {% if item.url %}<a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
+              {% if item.url %}<a href="{{ item.url|link }}" target="_blank" rel="noopener">{{ item.title }}</a>
               {% else %}{{ item.title }}{% endif %}
             </h3>
             <p class="record__meta">Saved {{ item.saved_on }}</p>
@@ -125,7 +125,7 @@
           <div class="record__main">
             <span class="record__employer">{{ item.company }}</span>
             <h3 class="record__title">
-              {% if item.url %}<a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
+              {% if item.url %}<a href="{{ item.url|link }}" target="_blank" rel="noopener">{{ item.title }}</a>
               {% else %}{{ item.title }}{% endif %}
             </h3>
             <p class="record__meta">Applied on {{ item.applied_on }}</p>
@@ -327,7 +327,7 @@
         {% for r in event_reminders %}
         <li class="remlist__row">
           <span class="remlist__when typed">{{ r.when }}</span>
-          <a href="{{ r.href }}">{{ r.title }}</a>
+          <a href="{{ r.href|link }}">{{ r.title }}</a>
           <span class="remlist__freq">{{ r.frequency|capitalize }}</span>
           <form method="post" action="/reminders/remove" hx-post="/reminders/remove" hx-target="closest li" hx-swap="outerHTML">
             <input type="hidden" name="key" value="{{ r.key }}">

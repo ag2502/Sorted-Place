@@ -6,7 +6,7 @@
    leaves the job as it was. The mark carries the advert's key so an answer can find
    its row. #}
 <span class="applied-mark" data-advert="{{ advert_key }}">
-  <a class="btn btn--apply" href="{{ url }}" target="_blank" rel="noopener"
+  <a class="btn btn--apply" href="{{ url|link }}" target="_blank" rel="noopener"
      {% if account %}
      data-apply-later='{{ {"advert_key": advert_key, "title": title, "company": company, "url": url}|tojson }}'
      {% endif %}>Apply

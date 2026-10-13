@@ -12,11 +12,11 @@
     {% for item in items %}
     <div style="padding:16px 24px;border-top:1px solid #eef0f3">
       <p style="margin:0 0 4px;font-size:12.5px;font-weight:700;color:{{ '#157a3a' if item.day_before else '#5c626d' }}">{{ item.countdown }}</p>
-      <a href="{{ item.page }}" style="font-size:17px;font-weight:650;color:#1a55c2;text-decoration:none;line-height:1.35">{{ item.title }}</a>
+      <a href="{{ item.page|link }}" style="font-size:17px;font-weight:650;color:#1a55c2;text-decoration:none;line-height:1.35">{{ item.title }}</a>
       <p style="margin:4px 0 0;font-size:14px;color:#454b56;line-height:1.5">{{ item.when }}{% if item.where %}<br>{{ item.where }}{% endif %}</p>
       <p style="margin:12px 0 0;font-size:13.5px;line-height:1.8">
-        <a href="{{ item.url }}" style="display:inline-block;padding:8px 16px;border-radius:999px;background:#2b74f0;color:#ffffff;font-weight:600;text-decoration:none">Details and registration</a>
-        {% if item.calendar %}&nbsp; <a href="{{ item.calendar }}" style="color:#1a55c2;font-weight:600">Add to calendar</a>{% endif %}
+        <a href="{{ item.url|link }}" style="display:inline-block;padding:8px 16px;border-radius:999px;background:#2b74f0;color:#ffffff;font-weight:600;text-decoration:none">Details and registration</a>
+        {% if item.calendar %}&nbsp; <a href="{{ item.calendar|link }}" style="color:#1a55c2;font-weight:600">Add to calendar</a>{% endif %}
         &nbsp; <a href="{{ stop(item) }}" style="color:#5c626d">Stop reminding me</a>
       </p>
     </div>

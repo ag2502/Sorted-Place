@@ -65,6 +65,7 @@ from jobfinder.matching import vocabulary
 from jobfinder.matching import llm_profile
 from jobfinder.matching.resume import cv_file_type, own_skills, parse_resume
 from jobfinder.web import advert
+from jobfinder.web.links import safe_link
 from jobfinder.events import listing as event_listing
 from jobfinder.events import relevance as event_kinds
 from jobfinder.normalize.dedup import (
@@ -235,6 +236,7 @@ def _no_em_dashes(value):
 
 
 templates.env.finalize = _no_em_dashes
+templates.env.filters["link"] = safe_link
 
 # What the results' own controls (filter bar, sort, Show more) re-submit to /search.
 # File inputs are left out on purpose: these controls sit outside the form, so htmx
@@ -3408,7 +3410,7 @@ def part_time(request: Request):
         "rows": [
             [j["id"], j["title"], emp_index.get(j["company_id"], -1), j["place"],
              j["county"], j["kind"], j["when"], j["hours"] or "", j["age"], int(j["new"]),
-             j["url"], j["advert_key"] if account else "", int(j["applied"])]
+             safe_link(j["url"]), j["advert_key"] if account else "", int(j["applied"])]
             for j in jobs
         ],
         "employers": [[e["name"], e["domain"], e["id"]] for e in employers],

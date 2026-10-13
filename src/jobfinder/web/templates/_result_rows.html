@@ -28,7 +28,7 @@
         {% for row in part %}
         <li class="corole" data-job="{{ row.job.id }}">
           <div class="corole__main">
-            <a class="corole__title" href="{{ row.job.url }}" target="_blank" rel="noopener">{{ row.job.title }}</a>
+            <a class="corole__title" href="{{ row.job.url|link }}" target="_blank" rel="noopener">{{ row.job.title }}</a>
             <span class="corole__meta">
               {{- row.age -}}
               {%- if row.via %} &middot; via {{ row.via.label }}{% endif -%}
@@ -118,7 +118,7 @@
           <ul class="also__list">
             {% for other in item.also %}
             <li class="also__row">
-              <a href="{{ other.job.url }}" target="_blank" rel="noopener" class="also__what">
+              <a href="{{ other.job.url|link }}" target="_blank" rel="noopener" class="also__what">
                 Opening {{ loop.index + 1 }}{% if other.place %}, {{ other.place }}{% endif -%}
               </a>
               <span class="record__age">{{ other.age }}</span>
