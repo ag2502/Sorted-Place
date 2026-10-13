@@ -1379,9 +1379,48 @@ def test_the_location_picker_narrows_to_one_county(irish_jobs):
         ("Cork", 2), ("Dublin", 1), ("Galway", 1),
     ]
     cork = irish_jobs(where="Cork")
-    assert cork["where"] == "Cork" and cork["total"] == 2
+    assert cork["where"] == ["Cork"] and cork["total"] == 2
+    assert cork["where_label"] == "in Cork"
     # A place with nothing in this search is ignored rather than emptying the list.
     assert irish_jobs(where="Kerry")["total"] == 4
+
+
+def test_the_location_picker_takes_several_counties(irish_jobs):
+    both = irish_jobs(where=["Cork", "Galway"])
+    assert both["total"] == 3 and both["where"] == ["Cork", "Galway"]
+    assert both["where_label"] == "in Cork or Galway"
+    assert {item["where"]["key"] for item in both["items"]} == {"Cork", "Galway"}
+    # One empty county among them is dropped, not the whole filter.
+    assert irish_jobs(where=["Kerry", "Galway"])["where"] == ["Galway"]
+
+
+def test_neighbouring_counties_widen_the_location(irish_jobs):
+    # Kerry has nothing of its own, but Cork is next door.
+    kerry = irish_jobs(where=["Kerry"], near=True)
+    assert kerry["total"] == 2 and kerry["near"]
+    assert kerry["where_label"] == "in or near Kerry"
+    # Kerry stays on the picker, ticked, with a count of nothing.
+    assert ("Kerry", 0) in [(p["key"], p["count"]) for p in kerry["places"]]
+    # Without the switch the same pick is ignored, as before.
+    assert irish_jobs(where=["Kerry"])["total"] == 4
+    # Meath borders Dublin but not Cork or Galway.
+    assert [i["where"]["key"] for i in irish_jobs(where=["Meath"], near=True)["items"]] == ["Dublin"]
+
+
+def test_county_neighbours_are_mutual():
+    from jobfinder.normalize.location import COUNTY_NEIGHBOURS, IRISH_COUNTIES
+
+    assert set(COUNTY_NEIGHBOURS) == set(IRISH_COUNTIES)
+    for county, beside in COUNTY_NEIGHBOURS.items():
+        for other in beside:
+            assert county in COUNTY_NEIGHBOURS[other], (county, other)
+
+
+def test_a_search_link_keeps_every_county_and_the_neighbours_switch():
+    import jobfinder.web.app as web
+
+    url = web._search_url({"fields": ["retail"]}, {"where": ["Cork", "Kerry"], "near": True})
+    assert url == "/?f=retail&where=Cork&where=Kerry&near=1"
 
 
 def test_sorting_by_location_puts_the_busiest_place_first(irish_jobs):

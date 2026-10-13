@@ -5,7 +5,6 @@
 {% from "_macros.html" import logo, titlebar, mascot %}
 {% set filtered = facet or company or mode or paid or pay or within or via or where %}
 {% set via_label = (platforms|selectattr("key", "equalto", via)|map(attribute="label")|first) if via else "" %}
-{% set where_label = (places|selectattr("key", "equalto", where)|map(attribute="label")|first) if where else "" %}
 {# What the filter bar has narrowed to, in words: "Backend at Stripe, hybrid, €50k+ salary".
    Said twice, above the list and in the bar that stays, so it is built once here. The
    first part keeps its capital and the generic ones after it go lower case; names never do. #}
@@ -16,7 +15,7 @@
 {% elif paid %}{% set _ = fparts.append("salary stated" if fparts else "Salary stated") %}{% endif %}
 {% if within %}{% set _ = fparts.append(within_choices[within]|lower if fparts else within_choices[within]) %}{% endif %}
 {% if via %}{% set _ = fparts.append("via " ~ via_label) %}{% endif %}
-{% if where %}{% set _ = fparts.append("in " ~ where_label) %}{% endif %}
+{% if where %}{% set _ = fparts.append(where_label) %}{% endif %}
 {% set filter_words = fparts|join(", ") %}
 {# Either early-career switch replaces the experience filter rather than adding to it. #}
 {% set early_only = internships_only or graduate_only %}
@@ -244,15 +243,25 @@
         </select>
       </label>
       {% if places and places|length > 1 or where %}
-      <label class="pick pick--wide">
-        <span>Location</span>
-        <select name="where">
-          <option value="">Anywhere in Ireland</option>
+      {# Tick one county or several; none ticked is anywhere in Ireland. The switch
+         widens each ticked county to the ones beside it, since a job is only known to
+         its county: the commute radius the data can honestly back. #}
+      <fieldset class="places pick--wide">
+        <legend>Location <span class="places__hint">{{ "Anywhere in Ireland" if not where else where|length ~ " picked" }}</span></legend>
+        <div class="places__list">
           {% for pl in places %}
-          <option value="{{ pl.key }}" {% if where == pl.key %}selected{% endif %}>{{ pl.label }} ({{ pl.count }})</option>
+          <label class="places__opt">
+            <input type="checkbox" name="where" value="{{ pl.key }}" {% if pl.key in where %}checked{% endif %}>
+            <span>{{ pl.label }}</span><b>{{ "{:,}".format(pl.count) }}</b>
+          </label>
           {% endfor %}
-        </select>
-      </label>
+        </div>
+        <label class="switch switch--sm">
+          <input type="checkbox" name="near" value="1" {% if near %}checked{% endif %}>
+          <span class="box"><svg aria-hidden="true"><use href="#i-check"/></svg></span>
+          Include neighbouring counties
+        </label>
+      </fieldset>
       {% endif %}
       {% if platforms and platforms|length > 1 or via %}
       <label class="pick pick--wide">
@@ -441,6 +450,23 @@
   .newonly input:checked + .stamp{background:var(--sorted);color:#fff}
   .newonly input:focus-visible ~ .newonly__do{outline:2.5px solid var(--aqua);outline-offset:2px;border-radius:4px}
   .rbar__paid{margin:0;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+  /* Location: a county or several, ticked in a short scrolling list like the company
+     picker's, and the switch that adds the counties beside them. */
+  .places{margin:0;padding:0;border:0;min-width:0;display:flex;flex-direction:column;gap:8px}
+  .places legend{display:flex;justify-content:space-between;width:100%;padding:0;margin-bottom:5px;
+    font-size:12.5px;font-weight:600;color:var(--ink-3)}
+  .places__hint{font-weight:500}
+  .places__list{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;max-height:212px;overflow-y:auto;
+    overscroll-behavior:contain;padding:4px;border:1px solid var(--line-strong);border-radius:var(--r-ctl);background:var(--surface)}
+  .places__opt{display:flex;align-items:center;gap:8px;min-height:36px;padding:4px 8px;border-radius:8px;cursor:pointer;font-size:14px}
+  .places__opt:hover{background:var(--aqua-wash)}
+  .places__opt input{flex:none;width:16px;height:16px;margin:0;accent-color:var(--aqua-deep)}
+  .places__opt span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .places__opt b{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-3)}
+  .places__opt:has(input:checked){font-weight:650}
+  .places__opt:has(input:checked) b{color:var(--aqua-deep)}
+  .places .switch{margin:0;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+  @media (max-width:420px){ .places__list{grid-template-columns:1fr} }
   /* The sheet's own heading and buttons, for phones only. */
   .rbar__head,.rbar__foot{display:none}
 

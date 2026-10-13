@@ -77,6 +77,7 @@ from jobfinder.normalize.dedup import (
 )
 from jobfinder.normalize.experience import matches_experience
 from jobfinder.normalize import facts as advert_facts
+from jobfinder.normalize.location import COUNTY_NEIGHBOURS
 from jobfinder.normalize import shifts
 from jobfinder.normalize.taxonomy import FIELDS, GROUPS, classify_title, extract_skills, is_technical
 
@@ -293,7 +294,7 @@ RERUN_BASE = (
 RERUN_INCLUDE = RERUN_BASE + (
     ", #results input[name=facet], #results input[name=company], #results select[name=mode],"
     " #results input[name=paid], #results select[name=pay], #results select[name=within], #results input[name=new_only],"
-    " #results select[name=via], #results select[name=where]"
+    " #results select[name=via], #results input[name=where], #results input[name=near]"
 )
 templates.env.globals.update(rerun_base=RERUN_BASE, rerun_include=RERUN_INCLUDE,
                              contact_email=settings.contact_email)
@@ -971,7 +972,7 @@ URL_KEYS = {
     "intern": "internships_only", "grad": "graduate_only", "pt": "part_time_only", "sort": "sort",
     "cv": "use_cv", "applied": "show_applied", "field": "facet", "co": "company",
     "view": "view", "mode": "mode", "paid": "paid", "pay": "pay", "within": "within", "via": "via",
-    "where": "where",
+    "where": "where", "near": "near",
 }
 
 
@@ -1009,8 +1010,9 @@ def _search_url(profile: dict, context: dict) -> str:
         pairs.append(("within", context["within"]))
     if context.get("via"):
         pairs.append(("via", context["via"]))
-    if context.get("where"):
-        pairs.append(("where", context["where"]))
+    pairs.extend(("where", place) for place in context.get("where") or [])
+    if context.get("near"):
+        pairs.append(("near", "1"))
     return "/?" + urlencode(pairs)
 
 
@@ -1032,12 +1034,12 @@ def home(request: Request):
     if (params.getlist("f") or (params.get("q") or "").strip()
             or (params.get("pt") or "").lower() in ("1", "true", "on", "yes")):
         form = {
-            field: (params.getlist(key) if key in ("f", "field") else params.get(key))
+            field: (params.getlist(key) if key in ("f", "field", "where") else params.get(key))
             for key, field in URL_KEYS.items()
         }
         # A switch in a link is on for 1 (what the site writes) and off for anything
         # else, so a hand-edited "paid=0" means what it says.
-        for key in ("remote", "intern", "grad", "pt", "cv", "applied", "paid"):
+        for key in ("remote", "intern", "grad", "pt", "cv", "applied", "paid", "near"):
             field = URL_KEYS[key]
             form[field] = "1" if (form.get(field) or "").lower() in ("1", "true", "on", "yes") else None
         response = _search(request, form)
@@ -1078,7 +1080,8 @@ async def search(
     within: str | None = Form(default=None),
     new_only: str | None = Form(default=None),
     via: str | None = Form(default=None),
-    where: str | None = Form(default=None),
+    where: list[str] = Form(default=[]),
+    near: str | None = Form(default=None),
     more: str | None = Form(default=None),
 ):
     form = {
@@ -1087,7 +1090,7 @@ async def search(
         "part_time_only": part_time_only, "years": years, "q": q, "sort": sort, "show_applied": show_applied,
         "use_cv": use_cv, "facet": facet, "company": company, "view": view,
         "mode": mode, "paid": paid, "pay": pay, "within": within, "new_only": new_only,
-        "via": via, "where": where,
+        "via": via, "where": where, "near": near,
     }
     return _search(request, form, page=page, more=bool(more))
 
@@ -1266,6 +1269,7 @@ def _search(request: Request, form: dict, *, page: int = 1, more: bool = False):
             new_only=bool(form.get("new_only")),
             via=form.get("via") or None,
             where=form.get("where") or None,
+            near=bool(form.get("near")),
         )
     )
     context["search_url"] = _search_url(profile, context)
@@ -1481,6 +1485,32 @@ STRENGTH_CAPS = {
 def _strength(position: int, total: int, cap: int = 3) -> int:
     share = position / max(total, 1)
     return min(3 if share < 0.2 else (2 if share < 0.6 else 1), cap)
+
+
+def _places_picked(where, near: bool, counts: dict) -> tuple[list[str], set[str]]:
+    """The places the Location filter keeps, and every place a row may be in to show.
+
+    Several counties can be ticked at once. A place with nothing in this search is
+    ignored rather than emptying the list, unless its neighbours are asked for and
+    have something: "near Kerry" still means Cork and Limerick when Kerry itself is
+    empty. `near` adds the counties sharing a border with each one ticked.
+    """
+    if isinstance(where, str):
+        where = [where]
+    picked = list(dict.fromkeys(w for w in where or [] if w))
+    def reach(place: str) -> set[str]:
+        return {place, *(COUNTY_NEIGHBOURS.get(place, ()) if near else ())}
+    kept = [w for w in picked if reach(w) & counts.keys()]
+    covered = set().union(*(reach(w) for w in kept)) if kept else set()
+    return kept, covered
+
+
+def _places_label(where: list[str], near: bool, counts: dict) -> str:
+    labels = [counts[w]["label"] if w in counts else w for w in where]
+    if not labels:
+        return ""
+    names = labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " or " + labels[-1]
+    return ("in or near " if near else "in ") + names
 
 
 def _in_ireland():
@@ -1823,7 +1853,8 @@ def _search_results(
     new_only: bool = False,
     per_page: int | None = None,
     via: str | None = None,
-    where: str | None = None,
+    where: list[str] | str | None = None,
+    near: bool = False,
 ) -> dict:
     """Rank the active jobs against a profile and build the template context.
 
@@ -2077,9 +2108,10 @@ def _search_results(
         for i in items:
             entry = where_counts.setdefault(i["where"]["key"], dict(i["where"], count=0))
             entry["count"] += 1
-        where = where if where in where_counts else None
+        where, covered = _places_picked(where, near, where_counts)
+        near = bool(near and where)
         if where:
-            items = [i for i in items if i["where"]["key"] == where]
+            items = [i for i in items if i["where"]["key"] in covered]
         within = _WITHIN_BEFORE.get(str(within or ""), within)
         within = within if within in WITHIN else None
         if within:
@@ -2232,9 +2264,15 @@ def _search_results(
         "within_choices": WITHIN,
         "via": via,
         "where": where,
-        # Busiest first, the roles that name no county last.
-        "places": sorted(where_counts.values(),
-                         key=lambda w: (w["key"] in ("ireland", "remote"), -w["count"], w["label"])),
+        "near": near,
+        # "Waterford, Kilkenny" or "or near Waterford": what the Location filter says.
+        "where_label": _places_label(where, near, where_counts),
+        # Busiest first, the roles that name no county last. A county picked for its
+        # neighbours stays on the list with nothing of its own, so it reads as ticked.
+        "places": sorted(
+            list(where_counts.values())
+            + [{"key": w, "label": w, "count": 0} for w in where if w not in where_counts],
+            key=lambda w: (w["key"] in ("ireland", "remote"), -w["count"], w["label"])),
         # Location headings replace the match bands when sorted by place.
         "by_location": by_location,
         "prev_where": (rows_out[start - 1]["where"]["key"]

@@ -1066,6 +1066,7 @@
         var input = c.querySelector('input[name="company"]');
         pickCompany(c, input.getAttribute('data-initial') || '', true);
       });
+      Array.prototype.forEach.call(scope.querySelectorAll('.places'), placesNote);
     }
 
     function shut(restoreFocus, discard) {
@@ -1170,6 +1171,16 @@
       if (t === all) Array.prototype.forEach.call(fields, function (x) { x.checked = false; });
       if (all) all.checked = !tabs.querySelector('input[name="facet"]:checked');
     }, true);
+    // The Location note says how many counties are ticked as they are ticked, before
+    // Show jobs, so a scrolled-away tick still counts on screen.
+    function placesNote(box) {
+      var n = box.querySelectorAll('input[name="where"]:checked').length;
+      box.querySelector('.places__hint').textContent = n ? n + ' picked' : 'Anywhere in Ireland';
+    }
+    document.addEventListener('change', function (e) {
+      var box = e.target.closest && e.target.closest('.places');
+      if (box) placesNote(box);
+    }, true);
 
     document.addEventListener('click', function (e) {
       var t = e.target;
@@ -1199,6 +1210,7 @@
         Array.prototype.forEach.call(scope.querySelectorAll('input[type=checkbox]'), function (x) { x.checked = false; });
         var all = scope.querySelector('[data-facet-all]'); if (all) all.checked = true;
         Array.prototype.forEach.call(scope.querySelectorAll('[data-cpick]'), function (x) { pickCompany(x, '', true); });
+        Array.prototype.forEach.call(scope.querySelectorAll('.places'), placesNote);
       }
       // A click anywhere outside the wide panel closes it, as a menu would.
       else {

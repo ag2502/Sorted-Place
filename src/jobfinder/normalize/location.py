@@ -112,6 +112,40 @@ IRISH_COUNTIES = (
     "Wexford", "Wicklow",
 )
 
+# The counties each one shares a land border with, inside the Republic. Jobs are only
+# known to the county, so "and the counties next to it" is the honest commute radius:
+# someone in Waterford reaching Kilkenny or Cork is the usual shape of a commute here.
+# Waterford and Wexford meet across the Suir estuary and count as neighbours.
+COUNTY_NEIGHBOURS: dict[str, tuple[str, ...]] = {
+    "Carlow": ("Kildare", "Kilkenny", "Laois", "Wexford", "Wicklow"),
+    "Cavan": ("Leitrim", "Longford", "Meath", "Monaghan", "Westmeath"),
+    "Clare": ("Galway", "Limerick", "Tipperary"),
+    "Cork": ("Kerry", "Limerick", "Tipperary", "Waterford"),
+    "Donegal": ("Leitrim",),
+    "Dublin": ("Kildare", "Meath", "Wicklow"),
+    "Galway": ("Clare", "Mayo", "Offaly", "Roscommon", "Tipperary"),
+    "Kerry": ("Cork", "Limerick"),
+    "Kildare": ("Carlow", "Dublin", "Laois", "Meath", "Offaly", "Wicklow"),
+    "Kilkenny": ("Carlow", "Laois", "Tipperary", "Waterford", "Wexford"),
+    "Laois": ("Carlow", "Kildare", "Kilkenny", "Offaly", "Tipperary"),
+    "Leitrim": ("Cavan", "Donegal", "Longford", "Roscommon", "Sligo"),
+    "Limerick": ("Clare", "Cork", "Kerry", "Tipperary"),
+    "Longford": ("Cavan", "Leitrim", "Roscommon", "Westmeath"),
+    "Louth": ("Meath", "Monaghan"),
+    "Mayo": ("Galway", "Roscommon", "Sligo"),
+    "Meath": ("Cavan", "Dublin", "Kildare", "Louth", "Monaghan", "Offaly", "Westmeath"),
+    "Monaghan": ("Cavan", "Louth", "Meath"),
+    "Offaly": ("Galway", "Kildare", "Laois", "Meath", "Roscommon", "Tipperary", "Westmeath"),
+    "Roscommon": ("Galway", "Leitrim", "Longford", "Mayo", "Offaly", "Sligo", "Westmeath"),
+    "Sligo": ("Leitrim", "Mayo", "Roscommon"),
+    "Tipperary": ("Clare", "Cork", "Galway", "Kilkenny", "Laois", "Limerick", "Offaly",
+                  "Waterford"),
+    "Waterford": ("Cork", "Kilkenny", "Tipperary", "Wexford"),
+    "Westmeath": ("Cavan", "Longford", "Meath", "Offaly", "Roscommon"),
+    "Wexford": ("Carlow", "Kilkenny", "Waterford", "Wicklow"),
+    "Wicklow": ("Carlow", "Dublin", "Kildare", "Wexford"),
+}
+
 # Towns, suburbs and business parks that boards give without their county.
 _IRISH_TOWNS = {
     "Cork": ("carrigaline", "ringaskiddy", "little island", "mallow", "cobh", "midleton",
