@@ -172,8 +172,8 @@ jobs:
         # made here rather than left to a Git trigger that does not exist.
         #
         # The snapshot is deliberately NOT committed. It is a 12 MB binary that changes
-        # completely every run, so committing it twelve times a day would add roughly
-        # 150 MB of pack objects daily to a repository that gains nothing from the
+        # completely every run, so committing it every hour would add roughly
+        # 300 MB of pack objects daily to a repository that gains nothing from the
         # history: only the newest snapshot is ever served.
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
