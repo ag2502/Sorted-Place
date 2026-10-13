@@ -239,7 +239,7 @@ need a fresh one:
 npx vercel --prod
 ```
 
-Or wait up to two hours for `crawl.yml`, which deploys at the end of every run.
+Or wait up to an hour for `crawl.yml`, which deploys at the end of every run.
 
 ---
 

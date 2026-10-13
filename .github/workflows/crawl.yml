@@ -15,9 +15,9 @@ name: Crawl
 
 on:
   schedule:
-    # Roughly every two hours. GitHub queues scheduled workflows with everyone else's,
+    # Roughly every hour. GitHub queues scheduled workflows with everyone else's,
     # so expect drift of minutes to tens of minutes; nothing here depends on exact times.
-    - cron: "0 */2 * * *"
+    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       adapter:
@@ -108,7 +108,7 @@ jobs:
         env:
           JOBFINDER_DATABASE_URL: ${{ env.STATE_DB_URL }}
         # Job fairs, graduate events and tech meetups for /events, refreshed every run so
-        # a new listing appears within two hours. Never fails the run: the jobs are what
+        # a new listing appears within the hour. Never fails the run: the jobs are what
         # this workflow is for, and an events site being down leaves the events already
         # stored exactly as they were (events/crawl.py).
         continue-on-error: true
@@ -136,7 +136,7 @@ jobs:
         # Supabase pauses a free project after about a week without traffic, and the
         # first request after that fails - which for a job site means someone cannot
         # sign in at the exact moment they came back to look. This crawl already runs
-        # every two hours, so one request from it is enough to keep the project awake
+        # every hour, so one request from it is enough to keep the project awake
         # and costs nothing.
         #
         # Never fails the crawl. The jobs are what this workflow is for; sign-in being

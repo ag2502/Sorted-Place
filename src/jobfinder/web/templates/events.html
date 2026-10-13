@@ -2,7 +2,7 @@
 {% from "_macros.html" import titlebar, mascot %}
 {% set nav = 'events' %}
 {% block title %}{{ "{:,}".format(ahead_total) }} careers events in Ireland | Sorted Place{% endblock %}
-{% block description %}Job fairs, graduate events, tech meetups and careers workshops across Ireland: {{ "{:,}".format(ahead_total) }} coming up, gathered from Eventbrite, Meetup, Luma and gradireland and checked every two hours.{% endblock %}
+{% block description %}Job fairs, graduate events, tech meetups and careers workshops across Ireland: {{ "{:,}".format(ahead_total) }} coming up, gathered from Eventbrite, Meetup, Luma and gradireland and checked every hour.{% endblock %}
 {% block railcount %}{{ "{:,}".format(ahead_total) }}<span class="rail-long"> events</span> ahead{% endblock %}
 
 {% block wide %}
@@ -19,7 +19,7 @@
     <p class="lede">
       <strong>{{ "{:,}".format(ahead_total) }} events</strong> coming up: job fairs, graduate
       days, tech meetups and workshops{% if counties %} in {{ counties|length }} {{ "county" if counties|length == 1 else "counties" }}{% endif %}{% if online_total %}, plus {{ online_total }} online{% endif %}.
-      Gathered from Eventbrite, Meetup, Luma and gradireland, and checked every two hours.
+      Gathered from Eventbrite, Meetup, Luma and gradireland, and checked every hour.
     </p>
     <ul class="ev-facts" aria-label="What is on">
       <li><b>{{ live|length }}</b> on now</li>
@@ -165,7 +165,7 @@
     <div class="ev-empty">
       {{ mascot("", "mascot--big") }}
       <h3>No events coming up just now.</h3>
-      <p class="muted">The next check is within two hours. Job fairs cluster in spring and autumn.</p>
+      <p class="muted">The next check is within the hour. Job fairs cluster in spring and autumn.</p>
     </div>
     {% endif %}
 

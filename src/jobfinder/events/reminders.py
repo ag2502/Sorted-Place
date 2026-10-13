@@ -9,7 +9,7 @@ every reminder with the service role key. For each one, until the event starts:
 * **nothing after**: once the event has happened the reminder is deleted.
 
 A person following several events gets one email listing them all. Nothing is sent at
-night (outside 07:00 to 22:00 Irish time); the crawl runs every two hours and the day
+night (outside 07:00 to 22:00 Irish time); the crawl runs every hour and the day
 before window is wide enough that the next morning's run still catches it.
 
 The times come from the events table, which the same crawl has just refreshed, so a
