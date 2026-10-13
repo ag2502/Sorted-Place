@@ -17,7 +17,10 @@ on:
   schedule:
     # Roughly every hour. GitHub queues scheduled workflows with everyone else's,
     # so expect drift of minutes to tens of minutes; nothing here depends on exact times.
-    - cron: "0 * * * *"
+    # Not on the hour: that is GitHub's busiest minute, and under load it drops queued
+    # schedules outright. At ":00" most runs never started (none for ten hours on
+    # 2026-10-13), which left "Today" empty of anything posted after breakfast.
+    - cron: "23 * * * *"
   workflow_dispatch:
     inputs:
       adapter:

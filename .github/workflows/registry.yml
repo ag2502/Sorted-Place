@@ -16,7 +16,7 @@ name: Registry
 on:
   schedule:
     # Sunday 02:00 UTC - off-peak, and a full day before the working week starts.
-    - cron: "0 2 * * 0"
+    - cron: "41 2 * * 0"
   workflow_dispatch:
     inputs:
       limit:
