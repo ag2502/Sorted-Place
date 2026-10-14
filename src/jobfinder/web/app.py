@@ -3394,7 +3394,7 @@ def _part_time_jobs(session) -> tuple[list[dict], list[dict]]:
             "posted": posted,
             "age": _age(posted, now) if row.posted_at else (
                 f"seen {_age(first_seen, now)}" if first_seen else ""),
-            "new": bool(first_seen and now - first_seen < timedelta(days=1)),
+            "new": _dated_today(posted, now),
             "url": row.url,
             "advert_key": key_for(*grouping[row.id]),
         })
@@ -3412,6 +3412,13 @@ def _part_time_jobs(session) -> tuple[list[dict], list[dict]]:
         key=lambda e: (-e["jobs"], e["name"].lower()),
     )
     return jobs, employers
+
+
+def _dated_today(posted: datetime | None, now: datetime) -> bool:
+    """Whether a part-time job carries the "new" mark: it does for the whole Irish day
+    it is listed under. Friday's jobs are new all Friday and lose the mark at midnight,
+    when Saturday's start getting it, so the mark always matches the page's Today."""
+    return bool(posted) and posted.astimezone(DUBLIN).date() == now.astimezone(DUBLIN).date()
 
 
 def _take_turns(jobs: list[dict]) -> list[dict]:

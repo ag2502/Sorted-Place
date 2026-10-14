@@ -1791,6 +1791,21 @@ def test_part_time_employers_take_turns_within_a_day():
     assert [j["company_id"] for j in _take_turns(jobs)] == [1, 2, 3, 1, 2, 1]
 
 
+def test_part_time_jobs_are_new_for_the_irish_day_they_are_listed_under():
+    from datetime import datetime, timezone
+
+    from jobfinder.web.app import _dated_today
+
+    friday_morning = datetime(2026, 10, 9, 8, tzinfo=timezone.utc)
+    friday_night = datetime(2026, 10, 9, 22, 30, tzinfo=timezone.utc)  # 23:30 in Dublin
+    saturday_start = datetime(2026, 10, 9, 23, 5, tzinfo=timezone.utc)  # 00:05 in Dublin
+    assert _dated_today(friday_morning, friday_night)
+    # At midnight in Ireland Friday's jobs lose the mark, though not 24 hours old.
+    assert not _dated_today(friday_night, saturday_start)
+    assert _dated_today(saturday_start, saturday_start)
+    assert not _dated_today(None, saturday_start)
+
+
 def test_a_job_and_a_search_can_be_shared(client):
     results = client.post("/search", data={"chosen_fields": ["software-engineering"], "pay": "40"},
                           headers={"HX-Request": "true"})
