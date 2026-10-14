@@ -18,7 +18,9 @@ part-time"), a statement about this role ("This is a part-time, permanent
 opportunity", "on a part time basis"), or an offer of both ("full and part time
 contracts available"). Weekly hours under thirty and an FTE fraction are counted too,
 since those are how the public sector and the forecourt chains write it ("Work on a
-15-hour weekly contract", "0.5 FTE").
+15-hour weekly contract", "0.5 FTE"), and so are relief and staff bank roles, which are
+shifts as they are needed ("Relief Social Care Worker", "Staff Bank Healthcare
+Assistant").
 
 An advert offering full or part time is part-time for this purpose: a searcher who
 ticks "Part-time only" can apply for it on part-time hours.
@@ -32,13 +34,27 @@ _PART_TIME = r"part[\s\-‐]?time"
 
 # The board's own label, normalised by dropping everything but letters:
 # "PART_TIME", "Part-time", "parttime", "PartTime", "Part time, Permanent".
-_TYPE_PART = re.compile(r"parttime|halftime|casual|hourly|sessional|zerohours?")
+_TYPE_PART = re.compile(r"parttime|halftime|casual|hourly|sessional|zerohours?|relief")
 
 _TITLE = re.compile(
     rf"\b{_PART_TIME}\b|\bp/t\b|\bhalf[\s-]?time\b|\bzero[\s-]hours?\b|\bsessional\b"
     r"|\bhourly[\s-]paid\b|\bcasual\b"
     # A "Weekend Shift" in a plant is a compressed full-time week; weekend *staff* are not.
     r"|\bweekends?\s+(?:only|staff|team|assistant|associate|position|role|job|work|crew)\b",
+    re.I,
+)
+
+# Relief and bank work is shifts as they come up. Not a relief pharmacist, manager or
+# driver, though: those cover the branches full time. And not a river bank ranger or an
+# investment bank, so "bank" counts only as the HSE and the care sector write it.
+_RELIEF = re.compile(r"\brelief\b(?!\s*(?:specialist|valves?|engineer))", re.I)
+_FULL_TIME_COVER = re.compile(
+    r"\b(?:manager|pharmacist|pharmacy|driver|operator|technician|engineer|supervisor)s?\b", re.I
+)
+_BANK = re.compile(
+    r"\bstaff\s+bank\b|\(\s*bank\s*\)|,\s*bank\s*$|\bbank\s+(?:staff|nurses?|nursing|care|"
+    r"carers?|workers?|healthcare|hcas?|midwi\w*|support|social|porters?|cleaners?|chefs?|"
+    r"catering|domestic|older|panel)\b",
     re.I,
 )
 
@@ -81,7 +97,7 @@ _BOTH = re.compile(
 
 # "20 hours per week", "16-24 hrs a week", "15 hrs/wk", "a 15-hour weekly contract".
 _WEEKLY_HOURS = re.compile(
-    r"(?<![\d.])(\d{1,2}(?:\.\d{1,2})?)\s*(?:(?:-|–|to)\s*(\d{1,2}(?:\.\d{1,2})?)\s*)?"
+    r"(?<![\d.])(\d{1,2}(?:\.\d{1,2})?)\s*(?:(?:-|–|/|to)\s*(\d{1,2}(?:\.\d{1,2})?)\s*)?"
     r"(?:-\s*)?(?:hours?|hrs?)\s*(?:(?:per|a|each|every)\s+week|/\s*(?:week|wk)|"
     r"weekly|p\.?/?w\b|pw\b)",
     re.I,
@@ -96,7 +112,8 @@ _TITLE_HOURS = re.compile(
 _FTE = re.compile(r"(?<![\d.])0?\.\d{1,2}\s*(?:fte|wte)\b|\bhalf[\s-]time\b", re.I)
 
 # A full-time week in Ireland is 35 to 40 hours. Thirty is the usual line drawn by
-# employers' own "part time (up to 30 hours)" wording.
+# employers' own "part time (up to 30 hours)" wording. A range counts by its lower end:
+# "24/32 hours weekly" offers a part-time week.
 PART_TIME_HOURS = 30
 
 
@@ -110,7 +127,7 @@ def _type_says_part_time(employment_type: str | None) -> bool:
 def _hours_say_part_time(text: str) -> bool:
     for match in _WEEKLY_HOURS.finditer(text):
         figures = [float(value) for value in match.groups() if value]
-        if figures and all(0 < figure < PART_TIME_HOURS for figure in figures):
+        if figures and 0 < min(figures) < PART_TIME_HOURS:
             return True
     return False
 
@@ -138,6 +155,8 @@ def is_part_time(
     if _type_says_part_time(employment_type):
         return True
     if _TITLE.search(title) or _FTE.search(title) or _hours_say_part_time(title):
+        return True
+    if _BANK.search(title) or (_RELIEF.search(title) and not _FULL_TIME_COVER.search(title)):
         return True
     for match in _TITLE_HOURS.finditer(title):
         figure = float(match.group(1) or match.group(2))
