@@ -56,7 +56,8 @@ _YEAR_PATTERNS = [
 # "Co - Op" is spaced out in Susquehanna's titles. A bare "placement" is an internship
 # ("Quantity Surveyor Placement") unless it names the person who arranges one.
 _INTERNSHIP = re.compile(
-    r"\b(intern|w?internships?|co\s*[-‐]?\s*op|summer analyst|"
+    r"\b(intern|w?internships?|co\s*[-‐]?\s*op|summer analyst|vacation schemes?|"
+    r"insight\s+(?:days?|weeks?|programmes?|programs?|events?)|"
     r"placements?(?!\s+(?:co\s*[-‐]?\s*ordinator|broker|officer|manager|lead|consultant|"
     r"specialist|advis[eo]r|planning)))\b",
     re.I,
@@ -82,6 +83,41 @@ _GRADUATE = re.compile(
     r"fresher|campus hire|university hire)\b",
     re.I,
 )
+
+# A graduate intake named by its start year rather than the word: Mazars' "Audit
+# Associate Dublin 2027", Bloomberg's "2027 Software Engineer - Dublin", Amazon's
+# "Software Development Engineer – 2026". The year leads the title or closes it.
+_INTAKE_YEAR = re.compile(r"^\s*20[2-3]\d\b(?!\s*/)|[\s\-–]20[2-3]\d\s*(?:,|\)|$)")
+_ENTRY_ROLE = re.compile(
+    r"\b(?:associates?|analysts?|engineers?|developers?|program(?:me)?s?|professionals?|"
+    r"scientists?|accountants?)\b",
+    re.I,
+)
+# A year on a senior post, a staffing round or a contract's end says nothing about who
+# it is for: "Rolling Campaign 2026", "2026 Christmas Team", "FTC Until 11.02.2027".
+_NOT_AN_INTAKE = re.compile(
+    r"\b(?:senior|snr|lead|principal|manager|director|head|chief|staff|registrar|fellow|"
+    r"lecturer|professor|teacher|nurse|campaign|christmas|seasonal|until|commencing|start|"
+    r"adaptation|ftc|consultant|contract|returners?|all levels|experienced)\b",
+    re.I,
+)
+# A student hired as one: "Validation Services Student", "Student Analyst", "Student
+# Energy Engineer". Not the staff who look after students, nor a PhD studentship.
+_STUDENT_ROLE = re.compile(
+    r"\bstudents?\s*$|^\s*students?\s+(?:[a-z&]+\s+){0,2}?"
+    r"(?:analyst|engineer|technician|scientist|developer|associate|assistant)\b",
+    re.I,
+)
+_NOT_A_STUDENT_ROLE = re.compile(
+    r"\b(?:phd|doctoral|postgraduate|research|health|recruit\w*|advis[eo]r|ambassador|"
+    r"support|officer|manager|counsell?or)\b|\bfor\s+(?:[a-z]+\s+){0,2}students?\b",
+    re.I,
+)
+# A board's own label: gradireland's "Graduate scheme", "Internship", "Placement".
+_TYPE_INTERNSHIP = re.compile(
+    r"\b(?:intern(?:ship)?|placement|vacation scheme|insight programme)\b", re.I
+)
+_TYPE_GRADUATE = re.compile(r"\b(?:graduate|training contract)\b", re.I)
 
 # "Emerging Talent" names the intake in "Software Engineer, Emerging Talent" but the team
 # in "Senior Recruiter, Emerging Talent", so the people who hire it are ruled out.
@@ -171,19 +207,28 @@ def analyze(
 ) -> ExperienceProfile:
     """Classify one posting's experience level.
 
-    `employment_type` is the board's own label ("Intern", "Full-time, Internship"),
-    which settles an internship whose title does not say so.
+    `employment_type` is the board's own label ("Intern", "Full-time, Internship",
+    gradireland's "Graduate scheme"), which settles a role whose title does not say so.
     """
     title = title or ""
     haystack = f"{title}\n{description or ''}"
 
-    is_internship = bool(_INTERNSHIP.search(_NOT_INTERNSHIP.sub(" ", title))) or bool(
-        re.search(r"\bintern(?:ship)?\b", employment_type or "", re.I)
+    is_internship = (
+        bool(_INTERNSHIP.search(_NOT_INTERNSHIP.sub(" ", title)))
+        or bool(_TYPE_INTERNSHIP.search(employment_type or ""))
+        or bool(_STUDENT_ROLE.search(title) and not _NOT_A_STUDENT_ROLE.search(title))
     )
     # An internship is nearly always signalled in the title; matching on description
     # alone turns every advert that mentions its intern programme into an internship.
-    is_graduate = bool(_GRADUATE.search(title)) or bool(
-        _TALENT_INTAKE.search(title) and not _TALENT_TEAM.search(title)
+    is_graduate = (
+        bool(_GRADUATE.search(title))
+        or bool(_TALENT_INTAKE.search(title) and not _TALENT_TEAM.search(title))
+        or bool(
+            not is_internship
+            and _INTAKE_YEAR.search(title) and _ENTRY_ROLE.search(title)
+            and not _NOT_AN_INTAKE.search(title)
+        )
+        or bool(_TYPE_GRADUATE.search(employment_type or ""))
     )
 
     if is_internship or is_graduate:

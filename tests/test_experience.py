@@ -331,3 +331,58 @@ def test_the_boards_own_label_makes_an_internship() -> None:
 def test_a_winternship_is_an_internship() -> None:
     assert analyze("Women's Winternship").is_internship
     assert analyze("Activision 2027 Summer Internships - MBA").is_internship
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["Audit Associate Dublin 2027", "2027 Software Engineer - Dublin",
+     "Software Development Engineer – 2026", "Software Development Engineer – 2027, AUTA",
+     "2027 Software Engineer Program - Full-time - Dublin"],
+)
+def test_an_intake_named_by_its_year_is_a_graduate_role(title: str) -> None:
+    assert analyze(title).is_graduate
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["Professionally Qualified Social Worker Rolling Campaign 2026 – Dublin North-East Region",
+     "2026 Christmas Team, Full Time", "Post Primary Teacher 2026/2027",
+     "Senior Software Engineer 2027", "Upcoming Opportunities 2026",
+     "PM Group - Returners Programme 2026",
+     "Packaging Engineer: EOL (Contract to Mid - End of 2029)",
+     "Beauty Advisor, Boots Galway (30 Hours) FTC Until 11.02.2027"],
+)
+def test_a_year_on_other_posts_is_not_an_intake(title: str) -> None:
+    assert not analyze(title).is_graduate
+
+
+def test_an_internship_with_its_year_is_not_also_a_graduate_role() -> None:
+    profile = analyze("2027 BNY Summer Internship Program - Audit (Dublin)")
+    assert profile.is_internship and not profile.is_graduate
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["Validation Services Student", "Student", "Student Analyst",
+     "Student Energy Engineer/Student Project Engineer", "2027 Dublin Vacation Scheme",
+     "Insight Days - March 2027"],
+)
+def test_students_vacation_schemes_and_insight_days_are_internships(title: str) -> None:
+    assert analyze(title).is_internship
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["Student Health Nurse, Student Health Department", "PhD Studentship",
+     "Specialist Notetaker for Deaf Students", "IGNITE Student Ambassador Programme",
+     "Senior Category Insight Analyst"],
+)
+def test_jobs_about_students_or_insight_are_not(title: str) -> None:
+    assert not analyze(title).is_internship
+
+
+def test_gradireland_type_tags_a_plainly_titled_programme() -> None:
+    assert analyze("Finance Associate", None, "Graduate scheme").is_graduate
+    assert analyze("Insight Day", None, "Insight programme").is_internship
+    assert analyze("Analyst", None, "Placement").is_internship
+    assert not analyze("Finance Associate", None, "Full-time, Permanent").is_graduate
