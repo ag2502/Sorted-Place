@@ -351,3 +351,41 @@ def test_a_board_is_irish_when_most_of_its_placed_jobs_are() -> None:
 def test_a_plain_place_beats_an_ambiguous_one_before_it() -> None:
     location = normalize_location("Ennis Road, Limerick", company_is_irish=True)
     assert location.region == "Limerick"
+
+
+@pytest.mark.parametrize(
+    ("title", "advert", "county"),
+    [
+        ("Electrician | Limerick", None, "Limerick"),
+        ("Cork Seasonal Store Crew", None, "Cork"),
+        ("BER Assessor", "Based in Ennis, we operate across Munster.\nLocation: Ennis, Co. Clare", "Clare"),
+        ("Radio Radar Technician", "You will be based at: Naval Base, Haulbowline Island, Cork", "Cork"),
+    ],
+)
+def test_a_job_with_no_location_can_name_its_county(title, advert, county) -> None:
+    from jobfinder.normalize.location import irish_region_in_advert
+
+    assert irish_region_in_advert(title, advert) == county
+
+
+@pytest.mark.parametrize(
+    ("title", "advert"),
+    [
+        ("Software Engineer", "We have offices in Cork and London. This role is in Berlin."),
+        ("Software Engineer", "Headquartered in Galway, we hire across Europe."),
+        ("Account Manager", "Location: London, UK"),
+        ("Sales Lead - Clare", None),
+    ],
+)
+def test_a_passing_mention_of_an_irish_town_does_not(title, advert) -> None:
+    from jobfinder.normalize.location import irish_region_in_advert
+
+    assert irish_region_in_advert(title, advert) is None
+
+
+def test_a_blank_location_job_is_placed_by_its_title() -> None:
+    from jobfinder.pipeline.state import resolve_location
+    from jobfinder.sources.base import RawJob
+
+    result = resolve_location(RawJob("1", "Electrician | Limerick", "https://x"))
+    assert result.is_ireland and not result.is_dublin and result.region == "Limerick"

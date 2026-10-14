@@ -46,7 +46,12 @@ from jobfinder.core.models import (
 from jobfinder.normalize.dedup import compute_dedup_key, normalize_company_name
 from jobfinder.normalize.experience import analyze as analyze_experience
 from jobfinder.normalize.hours import is_part_time
-from jobfinder.normalize.location import LocationResult, dublin_in_advert, normalize_location
+from jobfinder.normalize.location import (
+    LocationResult,
+    dublin_in_advert,
+    irish_region_in_advert,
+    normalize_location,
+)
 from jobfinder.normalize.text import html_to_text
 from jobfinder.sources.base import FetchResult, RawJob
 
@@ -99,6 +104,12 @@ def resolve_location(
             return LocationResult(
                 raw=job.location_raw, is_dublin=True, is_ireland=True, region="Dublin",
                 location_norm="Dublin, Ireland",
+            )
+        region = irish_region_in_advert(job.title, description)
+        if region:
+            return LocationResult(
+                raw=job.location_raw, is_dublin=region == "Dublin", is_ireland=True,
+                region=region, location_norm=f"{region}, Ireland",
             )
 
     return primary

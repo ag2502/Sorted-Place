@@ -561,6 +561,36 @@ def dublin_in_advert(text: str | None) -> bool:
     return False
 
 
+# Where an advert states the job's own place: "Location: Cork", "based in our Dundalk
+# office", "located at the Naval Base, Haulbowline Island, Cork".
+_ADVERT_PLACE = re.compile(
+    r"\b(?:location|based\s+(?:in|at|out\s+of)|located\s+(?:in|at))\b[^.\n]{0,70}",
+    re.IGNORECASE,
+)
+
+
+def irish_region_in_advert(title: str | None, description: str | None) -> str | None:
+    """The county a job with no location field names in its title or advert, or None.
+
+    The rest of Ireland's answer to `dublin_in_advert`, held to more: a county or town in
+    the title ("Electrician | Limerick", "Cork Store Crew"), or one the advert gives as
+    the job's place. A passing mention elsewhere in the text does not count.
+    """
+    def region_of(text: str) -> str | None:
+        tokens = _tokenize(text)
+        return irish_region(text, names_ireland=_names_ireland(text, {t.lower() for t in tokens}))
+
+    if title and (region := region_of(title)):
+        return region
+    text = (description or "")[:3000]
+    for match in _ADVERT_PLACE.finditer(text):
+        if _COMPANY_BOILERPLATE_BEFORE.search(text[max(0, match.start() - 30) : match.start()]):
+            continue
+        if region := region_of(match.group(0)):
+            return region
+    return None
+
+
 def is_dublin(raw: str | None) -> bool:
     """Convenience wrapper for call sites that only need the boolean."""
     return normalize_location(raw).is_dublin

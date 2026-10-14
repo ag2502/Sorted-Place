@@ -22,7 +22,11 @@ from jobfinder.core.models import Company, CoverageState, JobPosting, Source
 from jobfinder.normalize.experience import analyze as analyze_experience
 from jobfinder.normalize.dedup import fold_accents
 from jobfinder.normalize.hours import is_part_time
-from jobfinder.normalize.location import dublin_in_advert, normalize_location
+from jobfinder.normalize.location import (
+    dublin_in_advert,
+    irish_region_in_advert,
+    normalize_location,
+)
 from jobfinder.normalize.text import html_to_text
 
 logger = logging.getLogger(__name__)
@@ -186,6 +190,9 @@ def recompute_derived(session: Session, *, batch: int = 500) -> int:
         )
         if not (job.location_raw or "").strip():
             location.is_dublin = dublin_in_advert(f"{job.title}\n{job.description or ''}")
+            if not location.is_dublin:
+                location.region = irish_region_in_advert(job.title, job.description)
+                location.is_ireland = bool(location.region)
         job.is_dublin = location.is_dublin
         job.is_ireland = location.is_ireland or location.is_dublin
         job.region = "Dublin" if location.is_dublin else location.region
