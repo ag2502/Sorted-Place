@@ -56,8 +56,16 @@ _YEAR_PATTERNS = [
 # "Co - Op" is spaced out in Susquehanna's titles. A bare "placement" is an internship
 # ("Quantity Surveyor Placement") unless it names the person who arranges one.
 _INTERNSHIP = re.compile(
-    r"\b(intern|internship|co\s*[-‐]?\s*op|summer analyst|"
-    r"placements?(?!\s+(?:coordinator|broker|officer|manager|lead|consultant|specialist|advis[eo]r)))\b",
+    r"\b(intern|w?internships?|co\s*[-‐]?\s*op|summer analyst|"
+    r"placements?(?!\s+(?:co\s*[-‐]?\s*ordinator|broker|officer|manager|lead|consultant|"
+    r"specialist|advis[eo]r|planning)))\b",
+    re.I,
+)
+# Placements and interns that are not a student's: a child placed in care, the staff who
+# teach hospital interns.
+_NOT_INTERNSHIP = re.compile(
+    r"\b(?:emergency|foster|residential|respite|care)\s+placements?\b"
+    r"|\bintern\s+(?:education|training|tutor)\b",
     re.I,
 )
 
@@ -158,13 +166,19 @@ def infer_years_from_title(title: str) -> int | None:
     return None
 
 
-def analyze(title: str, description: str | None = None) -> ExperienceProfile:
-    """Classify one posting's experience level."""
+def analyze(
+    title: str, description: str | None = None, employment_type: str | None = None
+) -> ExperienceProfile:
+    """Classify one posting's experience level.
+
+    `employment_type` is the board's own label ("Intern", "Full-time, Internship"),
+    which settles an internship whose title does not say so.
+    """
     title = title or ""
     haystack = f"{title}\n{description or ''}"
 
-    is_internship = bool(_INTERNSHIP.search(title)) or bool(
-        _INTERNSHIP.search(description or "") and _INTERNSHIP.search(title)
+    is_internship = bool(_INTERNSHIP.search(_NOT_INTERNSHIP.sub(" ", title))) or bool(
+        re.search(r"\bintern(?:ship)?\b", employment_type or "", re.I)
     )
     # An internship is nearly always signalled in the title; matching on description
     # alone turns every advert that mentions its intern programme into an internship.

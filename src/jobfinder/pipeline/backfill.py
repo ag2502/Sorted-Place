@@ -174,7 +174,7 @@ def recompute_derived(session: Session, *, batch: int = 500) -> int:
 
     for index, job in enumerate(jobs, 1):
         job.description = html_to_text(job.description)
-        experience = analyze_experience(job.title, job.description)
+        experience = analyze_experience(job.title, job.description, job.employment_type)
         job.min_years_required = experience.min_years
         job.years_inferred = experience.inferred
         job.is_internship = experience.is_internship

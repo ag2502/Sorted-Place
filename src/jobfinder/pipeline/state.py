@@ -243,7 +243,7 @@ def _upsert_jobs(
 
         description = html_to_text(raw.description)
         location = resolve_location(raw, company_is_irish=irish_board, description=description)
-        experience = analyze_experience(raw.title, description)
+        experience = analyze_experience(raw.title, description, raw.employment_type)
         part_time = is_part_time(raw.title, description, raw.employment_type)
         dedup_key = compute_dedup_key(
             job_company.name,
@@ -300,7 +300,7 @@ def _upsert_jobs(
         # its advert this time keeps the one it already had rather than losing it.
         if not description and job.description:
             description = job.description
-            experience = analyze_experience(raw.title, description)
+            experience = analyze_experience(raw.title, description, raw.employment_type)
             part_time = is_part_time(raw.title, description, raw.employment_type)
 
         job.company_id = job_company.id

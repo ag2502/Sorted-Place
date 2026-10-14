@@ -308,3 +308,26 @@ def test_both_early_career_switches_mean_either():
     assert _eligible(None, intern=True, want_interns=True, want_grads=True)
     assert _eligible(None, grad=True, want_interns=True, want_grads=True)
     assert not _eligible(None, job_years=0, want_interns=True, want_grads=True)
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["Clinical Placement Co-ordinator", "Clinical Placement Co-Ordinator",
+     "Social Care Manager - Temporary Emergency Placement",
+     "Clinical Nurse Manager 1 Disability Services Placement Planning and Review Team",
+     "Lecturer in Medical Intern Education, part time (0.5FTE)"],
+)
+def test_staff_who_run_placements_or_teach_interns_are_not_interns(title: str) -> None:
+    assert not analyze(title).is_internship
+
+
+def test_the_boards_own_label_makes_an_internship() -> None:
+    assert analyze("Data Engineer", None, "Intern").is_internship
+    assert analyze("Analyst", None, "Full-time, Internship").is_internship
+    assert not analyze("Data Engineer", None, "Full-time, Permanent").is_internship
+    assert not analyze("Data Engineer", None, "Internal transfer").is_internship
+
+
+def test_a_winternship_is_an_internship() -> None:
+    assert analyze("Women's Winternship").is_internship
+    assert analyze("Activision 2027 Summer Internships - MBA").is_internship
