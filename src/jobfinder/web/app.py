@@ -1656,7 +1656,7 @@ def _stored_reading(
 def _preload_snapshot_readings() -> None:
     """Take what the snapshot build already worked out about each advert, once per process.
 
-    See `rank.preload_skills` and `rank.preload_title_fields`.
+    See `rank.preload_skills`, `rank.preload_title_fields` and `_STORED_FACTS`.
     """
     global _readings_preloaded
     if _readings_preloaded:
@@ -1672,6 +1672,9 @@ def _preload_snapshot_readings() -> None:
     rank.preload_title_fields(
         fingerprint, ((title, json.loads(value)) for title, value in stored.items())
     )
+    fingerprint, stored = _stored_reading("advert_facts", "reading_key", "facts", "fingerprint")
+    if fingerprint == advert_facts.fingerprint():
+        _STORED_FACTS.update(stored)
 
 
 # Which live Dublin jobs ask for each skill, for the CV panel's "in demand" count. Built
@@ -1753,6 +1756,10 @@ def _cv_demand(skills: list[str]) -> dict:
 # process. The snapshot is replaced by a deploy, never in place, so an entry can only go
 # stale when a local database changes under a running server; the text check covers that.
 _FACTS: dict[int, tuple[int, dict]] = {}
+# The same readings taken by the snapshot build, still encoded (see `advert_facts.encode`)
+# and filed under `advert_facts.reading_key`. Reading every result's prose cost the first
+# search on a fresh Vercel instance about 0.75s on a laptop, several times that there.
+_STORED_FACTS: dict[str, str] = {}
 
 
 def _facts_for(job: JobPosting) -> dict:
@@ -1761,10 +1768,18 @@ def _facts_for(job: JobPosting) -> dict:
     hit = _FACTS.get(job.id)
     if hit is not None and hit[0] == key:
         return hit[1]
-    found = {
-        "mode": advert_facts.work_mode(text, is_remote=job.is_remote),
-        "salary": advert_facts.salary(text),
-    }
+    stored = (
+        _STORED_FACTS.get(advert_facts.reading_key(text, is_remote=job.is_remote))
+        if _STORED_FACTS else None
+    )
+    if stored is not None:
+        mode, pay = advert_facts.decode(stored)
+        found = {"mode": mode, "salary": pay}
+    else:
+        found = {
+            "mode": advert_facts.work_mode(text, is_remote=job.is_remote),
+            "salary": advert_facts.salary(text),
+        }
     _FACTS[job.id] = (key, found)
     return found
 

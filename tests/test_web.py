@@ -907,6 +907,36 @@ def test_precomputed_title_fields_are_what_ranking_would_have_found():
     assert rank._title_fields(title) == tuple(classify_title(title))
 
 
+def test_stored_advert_facts_read_back_as_the_readers_found_them():
+    from jobfinder.normalize import facts
+
+    text = "Hybrid working, 3 days per week in the office. Salary: €55,000 - €70,000 per annum."
+    mode, pay = facts.work_mode(text), facts.salary(text)
+    assert mode and pay
+    assert facts.decode(facts.encode(mode, pay)) == (mode, pay)
+    assert facts.decode(facts.encode(None, None)) == (None, None)
+    # Whether the job is flagged remote is part of what was read.
+    assert facts.reading_key(text, is_remote=True) != facts.reading_key(text, is_remote=False)
+
+
+def test_stored_advert_facts_are_used_in_place_of_reading_the_advert():
+    from types import SimpleNamespace
+
+    from jobfinder.normalize import facts
+    from jobfinder.web import app as web
+
+    job = SimpleNamespace(id=-1, description="No stated mode or pay.", is_remote=False)
+    stored = facts.encode(facts.WorkMode(facts.ONSITE), None)
+    web._STORED_FACTS[facts.reading_key(job.description, is_remote=False)] = stored
+    try:
+        assert web._facts_for(job)["mode"] == facts.WorkMode(facts.ONSITE)
+    finally:
+        web._STORED_FACTS.clear()
+        web._FACTS.pop(job.id, None)
+    assert web._facts_for(job)["mode"] is None
+    web._FACTS.pop(job.id, None)
+
+
 def test_an_early_career_search_hides_no_graduate_job(client):
     """Only a dozen or so graduate jobs are open at a time, and a programme usually takes
     any discipline, so ticking a field orders them rather than hiding most of them."""

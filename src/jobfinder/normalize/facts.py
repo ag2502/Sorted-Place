@@ -10,8 +10,11 @@ an interview under a false impression.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 
 # --------------------------------------------------------------------- work mode
 
@@ -218,3 +221,33 @@ def salary(description: str | None) -> Salary | None:
         ote = bool(re.search(r"\bOTE\b|on[- ]target", before[-80:] + after[:30], re.IGNORECASE))
         return Salary(round(low), round(high), period, ote)
     return None
+
+
+# ------------------------------------------------------------- stored readings
+#
+# The snapshot build reads every advert once and stores the answers (see
+# `scripts/export_snapshot.py`), so a fresh Vercel instance does not spend its first
+# search running these patterns over every result.
+
+
+def fingerprint() -> str:
+    """Identifies this module's code, so readings stored by different code are ignored.
+
+    The whole file rather than its patterns: the rules live as much in the functions
+    above as in the regexes.
+    """
+    return hashlib.sha1(Path(__file__).read_bytes()).hexdigest()
+
+
+def reading_key(description: str | None, *, is_remote: bool) -> str:
+    """What a stored reading is filed under: everything `work_mode` and `salary` read."""
+    return hashlib.sha1(f"{int(bool(is_remote))}\n{description or ''}".encode()).hexdigest()
+
+
+def encode(mode: WorkMode | None, pay: Salary | None) -> str:
+    return json.dumps([asdict(mode) if mode else None, asdict(pay) if pay else None])
+
+
+def decode(value: str) -> tuple[WorkMode | None, Salary | None]:
+    mode, pay = json.loads(value)
+    return (WorkMode(**mode) if mode else None, Salary(**pay) if pay else None)

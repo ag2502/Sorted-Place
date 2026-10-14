@@ -92,6 +92,32 @@ def _precompute_title_fields(target) -> int:
     return len(found) - 1
 
 
+def _precompute_facts(target) -> int:
+    """Store the work mode and pay each advert states, for the same reason again.
+
+    Keyed by everything the readers look at (see `facts.reading_key`) and fingerprinted
+    by the code that read them (see `facts.fingerprint`).
+    """
+    from jobfinder.normalize import facts
+
+    with target.begin() as dst:
+        dst.exec_driver_sql(
+            "create table advert_facts (reading_key text primary key, facts text not null)"
+        )
+        rows = dst.exec_driver_sql("select description, is_remote from job_postings").all()
+        found: dict[str, str] = {}
+        for description, is_remote in rows:
+            found[facts.reading_key(description, is_remote=bool(is_remote))] = facts.encode(
+                facts.work_mode(description, is_remote=bool(is_remote)),
+                facts.salary(description),
+            )
+        found["fingerprint"] = facts.fingerprint()
+        dst.exec_driver_sql(
+            "insert into advert_facts (reading_key, facts) values (?, ?)", list(found.items())
+        )
+    return len(found) - 1
+
+
 def export(destination: Path) -> Path:
     """Copy the servable rows from the configured database into a fresh SQLite file."""
     if destination.exists():
@@ -122,6 +148,7 @@ def export(destination: Path) -> Path:
 
     totals["advert_skills"] = _precompute_skills(target)
     totals["title_fields"] = _precompute_title_fields(target)
+    totals["advert_facts"] = _precompute_facts(target)
 
     # Reclaim the pages freed by everything that was not copied; without this the file
     # keeps the source's footprint and the size win disappears.
