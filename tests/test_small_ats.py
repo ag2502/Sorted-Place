@@ -362,7 +362,7 @@ def test_occupop_frame_can_be_served_under_another_host():
 
 @respx.mock
 def test_occupop_frame_can_name_a_single_site_employers_town():
-    row = FRAME_ROW.replace("Dundalk, Co. Louth, Ireland", "National Concert Hall, Earlsfort Terrace")
+    row = FRAME_ROW.replace("Dundalk, Co. Louth, Ireland", "National Concert Hall")
     respx.get(url__startswith="https://api.occupop.com/api/jobs-frame/tok5").mock(return_value=httpx.Response(200, text=row))
     job = OccupopAdapter().fetch("frame:tok5|Dublin, Ireland").jobs[0]
-    assert job.location_raw == "National Concert Hall, Earlsfort Terrace, Dublin, Ireland"
+    assert job.location_raw == "National Concert Hall, Dublin, Ireland"

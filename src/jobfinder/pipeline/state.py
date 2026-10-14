@@ -104,6 +104,16 @@ def resolve_location(
     return primary
 
 
+def board_is_irish(locations: list[str | None]) -> bool:
+    """Do most of a board's placed jobs read as Irish on their own?
+
+    Such a board writes its counties bare ("Clare", "Kerry", Dunnes Stores and TK Maxx
+    Ireland do), so a name that is ambiguous elsewhere is the Irish place there.
+    """
+    verdicts = [normalize_location(raw).is_ireland for raw in locations if (raw or "").strip()]
+    return sum(verdicts) * 2 > len(verdicts)
+
+
 def classify(result: FetchResult, prev_jobs_found: int | None) -> CrawlStatus:
     """Apply the volume-drop circuit breaker to an otherwise-successful fetch.
 
@@ -212,6 +222,7 @@ def _upsert_jobs(
     now = utcnow()
     seen: set[str] = set()
     company_cache: dict[str, Company] = {}
+    irish_board = board_is_irish([raw.location_raw for raw in jobs])
 
     for raw in jobs:
         if not raw.source_job_id or not raw.title:
@@ -231,7 +242,7 @@ def _upsert_jobs(
         job_company = _company_for(session, company, raw, company_cache)
 
         description = html_to_text(raw.description)
-        location = resolve_location(raw, description=description)
+        location = resolve_location(raw, company_is_irish=irish_board, description=description)
         experience = analyze_experience(raw.title, description)
         part_time = is_part_time(raw.title, description, raw.employment_type)
         dedup_key = compute_dedup_key(

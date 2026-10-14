@@ -12,6 +12,7 @@ Anything more involved belongs in a real migration.
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 
 from sqlalchemy import inspect, select, text
 from sqlalchemy.orm import Session
@@ -163,7 +164,13 @@ def recompute_part_time(session: Session, *, batch: int = 500) -> int:
 
 def recompute_derived(session: Session, *, batch: int = 500) -> int:
     """Recompute experience and location flags from stored text."""
+    from jobfinder.pipeline.state import board_is_irish
+
     jobs = session.execute(select(JobPosting)).scalars().all()
+    by_board: dict[int, list[str | None]] = defaultdict(list)
+    for job in jobs:
+        by_board[job.source_id].append(job.location_raw)
+    irish_boards = {source_id for source_id, places in by_board.items() if board_is_irish(places)}
 
     for index, job in enumerate(jobs, 1):
         job.description = html_to_text(job.description)
@@ -174,7 +181,9 @@ def recompute_derived(session: Session, *, batch: int = 500) -> int:
         job.is_graduate = experience.is_graduate
         job.is_part_time = is_part_time(job.title, job.description, job.employment_type)
 
-        location = normalize_location(job.location_raw)
+        location = normalize_location(
+            job.location_raw, company_is_irish=job.source_id in irish_boards
+        )
         if not (job.location_raw or "").strip():
             location.is_dublin = dublin_in_advert(f"{job.title}\n{job.description or ''}")
         job.is_dublin = location.is_dublin

@@ -337,3 +337,17 @@ def test_an_irish_board_settles_an_ambiguous_name(raw: str, county: str) -> None
 @pytest.mark.parametrize("raw", ["Douglas, Isle of Man", "Shannon, UK", "Clare, CA"])
 def test_an_irish_board_does_not_overrule_a_country_named_beside(raw: str) -> None:
     assert not normalize_location(raw, company_is_irish=True).is_ireland
+
+
+def test_a_board_is_irish_when_most_of_its_placed_jobs_are() -> None:
+    from jobfinder.pipeline.state import board_is_irish
+
+    assert board_is_irish(["Cork", "Dublin 2", "Clare", None, ""])
+    assert not board_is_irish(["London", "Leeds", "Clare"])
+    assert not board_is_irish(["Shannon"])
+    assert not board_is_irish([None])
+
+
+def test_a_plain_place_beats_an_ambiguous_one_before_it() -> None:
+    location = normalize_location("Ennis Road, Limerick", company_is_irish=True)
+    assert location.region == "Limerick"

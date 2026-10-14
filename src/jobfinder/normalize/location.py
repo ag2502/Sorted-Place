@@ -395,26 +395,34 @@ def irish_region(text: str, *, names_ireland: bool, irish_board: bool = False) -
     if _NORTHERN_IRELAND.search(text) and not names_ireland:
         return None
     tokens = _tokenize(text)
-    for index, token in enumerate(tokens):
-        for match in _IRISH_PLACE.finditer(token):
-            place = match.group(1).lower()
-            if place in _AMBIGUOUS_PLACES and not (
-                names_ireland or irish_board or _same_county_pair(tokens, place)
-            ):
-                continue
-            # The next entry says which country: "Waterford, MI", "Bray, UK".
-            following = tokens[index + 1].strip() if index + 1 < len(tokens) else ""
-            if (
-                following.lower() in _FOREIGN_COUNTRIES
-                or _is_state(following)
-                or _is_state_with_zip(following)
-            ):
-                continue
-            # Or the state sits in the same entry: "Waterford MI".
-            code = _CODE_AFTER.match(token[match.end():])
-            if code and _is_state(code.group(1)):
-                continue
-            return _PLACE_REGION[place]
+    places = [
+        (index, token, match)
+        for index, token in enumerate(tokens)
+        for match in _IRISH_PLACE.finditer(token)
+    ]
+    if not names_ireland:
+        # Trusted only on the board's word, an ambiguous place gives way to a plain one
+        # wherever each sits: "Ennis Road, Limerick" is in Limerick.
+        places.sort(key=lambda found: found[2].group(1).lower() in _AMBIGUOUS_PLACES)
+    for index, token, match in places:
+        place = match.group(1).lower()
+        if place in _AMBIGUOUS_PLACES and not (
+            names_ireland or irish_board or _same_county_pair(tokens, place)
+        ):
+            continue
+        # The next entry says which country: "Waterford, MI", "Bray, UK".
+        following = tokens[index + 1].strip() if index + 1 < len(tokens) else ""
+        if (
+            following.lower() in _FOREIGN_COUNTRIES
+            or _is_state(following)
+            or _is_state_with_zip(following)
+        ):
+            continue
+        # Or the state sits in the same entry: "Waterford MI".
+        code = _CODE_AFTER.match(token[match.end():])
+        if code and _is_state(code.group(1)):
+            continue
+        return _PLACE_REGION[place]
     return None
 
 
