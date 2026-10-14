@@ -295,3 +295,45 @@ def test_a_dublin_neighbourhood_named_in_another_country_is_that_country() -> No
     location = normalize_location("ibis Amsterdam City West, Amsterdam, Netherlands")
     assert not location.is_dublin and not location.is_ireland
     assert normalize_location("City West Business Campus").is_dublin
+
+
+@pytest.mark.parametrize(
+    "raw,county",
+    [("Cruiserath - IE", "Dublin"), ("St Benedicts Creche, Kilbarrack", "Dublin"),
+     ("Stephens Green", "Dublin"), ("Westport IE", "Mayo"), ("Kerry, Munster", "Kerry"),
+     ("Louth, Leinster", "Louth"), ("Shannon, Clare", "Clare"), ("Killarney, Kerry", "Kerry"),
+     ("Carrick on Shannon", "Leitrim"), ("Newtownmountkennedy", "Wicklow"),
+     ("The Rower", "Kilkenny"), ("Kingscourt", "Cavan"), ("Collinstown", "Kildare")],
+)
+def test_places_live_boards_were_losing_are_irish(raw: str, county: str) -> None:
+    """Each was a live role filed abroad: a code glued on with a dash, a province, a town
+    beside its own county, or a town missing from the list."""
+    location = normalize_location(raw)
+    assert location.is_ireland and location.region == county
+
+
+@pytest.mark.parametrize("raw", ["IRL_City North", "IRL DUBL 11-12", "Munster", "Connacht"])
+def test_the_country_code_or_a_province_alone_is_irish(raw: str) -> None:
+    assert normalize_location(raw).is_ireland
+
+
+@pytest.mark.parametrize("raw", ["Munster, Germany", "Munster, IN", "Belfast, Northern Ireland"])
+def test_a_province_named_abroad_is_not(raw: str) -> None:
+    assert not normalize_location(raw).is_ireland
+
+
+@pytest.mark.parametrize(
+    "raw,county",
+    [("Clare", "Clare"), ("Shannon", "Clare"), ("Kerry, Kerry", "Kerry"), ("Knock", "Mayo"),
+     ("30867 CIRCLE K CASHEL", "Tipperary")],
+)
+def test_an_irish_board_settles_an_ambiguous_name(raw: str, county: str) -> None:
+    """Dunnes Stores and TK Maxx Ireland write the county alone."""
+    assert not normalize_location(raw).is_ireland
+    location = normalize_location(raw, company_is_irish=True)
+    assert location.is_ireland and location.region == county
+
+
+@pytest.mark.parametrize("raw", ["Douglas, Isle of Man", "Shannon, UK", "Clare, CA"])
+def test_an_irish_board_does_not_overrule_a_country_named_beside(raw: str) -> None:
+    assert not normalize_location(raw, company_is_irish=True).is_ireland

@@ -84,7 +84,8 @@ _DUBLIN_LOCALITIES = {
     "phibsborough", "stoneybatter", "foxrock", "cabinteely", "glenageary",
     "knocklyon", "templeogue", "firhouse", "mulhuddart", "clonsilla", "coolock",
     "artane", "ballymount", "stepaside", "sallynoggin", "deansgrange", "goatstown",
-    "clonshaugh", "kilmainham",
+    "clonshaugh", "kilmainham", "cruiserath", "ballycoolen", "kilbarrack", "kennelsfort",
+    "ballyogan", "stephens green", "stephen's green", "earlsfort terrace",
     # County Dublin's local authority areas, which public-sector boards give as the
     # location of a council role.
     "fingal", "dún laoghaire-rathdown", "dun laoghaire-rathdown",
@@ -152,39 +153,45 @@ _IRISH_TOWNS = {
              "fermoy", "youghal", "kinsale", "blarney", "ballincollig", "glanmire",
              "carrigtwohill", "macroom", "clonakilty", "skibbereen", "bantry", "mahon",
              "mitchelstown", "mogeely", "charleville", "bandon", "kanturk", "millstreet",
-             "dunmanway", "drinagh", "ballineen", "bishopstown", "whitegate", "castlelyons"),
+             "dunmanway", "drinagh", "ballineen", "bishopstown", "whitegate", "castlelyons",
+             "watergrasshill", "frankfield", "moorepark", "douglas", "togher"),
     "Galway": ("oranmore", "ballybrit", "parkmore", "tuam", "ballinasloe", "loughrea",
-               "athenry", "clifden", "portumna", "gort", "knocknacarra"),
+               "athenry", "clifden", "portumna", "gort", "knocknacarra", "kilcolgan"),
     "Limerick": ("castletroy", "raheen", "plassey", "annacotty", "newcastle west",
                  "old pallas", "abbeyfeale", "rathkeale", "kilmallock", "newcastlewest",
-                 "adare", "aughinish"),
+                 "adare", "aughinish", "bruff", "ballysimon"),
     "Waterford": ("dungarvan", "tramore"),
     "Kildare": ("naas", "maynooth", "celbridge", "leixlip", "newbridge", "athy", "kilcock",
-                "clane", "kilcullen", "sallins", "monasterevin", "kildare town", "ballitore"),
+                "clane", "kilcullen", "sallins", "monasterevin", "kildare town", "ballitore",
+                "collinstown"),
     "Meath": ("navan", "ashbourne", "trim", "dunboyne", "kells", "ratoath", "dunshaughlin",
-              "athboy", "duleek"),
-    "Wicklow": ("bray", "greystones", "arklow", "blessington"),
+              "athboy", "duleek", "clonee"),
+    "Wicklow": ("bray", "greystones", "arklow", "blessington", "newtownmountkennedy",
+                "kilmacanogue"),
     "Louth": ("dundalk", "drogheda", "ardee"),
     "Westmeath": ("athlone", "mullingar", "moate"),
     "Wexford": ("enniscorthy", "gorey", "new ross", "rosslare", "bunclody"),
     "Carlow": ("tullow",),
     "Tipperary": ("clonmel", "thurles", "nenagh", "cashel", "carrick-on-suir", "roscrea",
-                  "cahir", "templemore", "tipperary town"),
+                  "cahir", "templemore", "tipperary town", "ballydine"),
     "Clare": ("ennis", "shannon", "kilrush", "sixmilebridge", "rineanna", "ardnacrusha"),
     "Kilkenny": ("thomastown", "castlecomer", "ballyragget", "urlingford", "belview",
-                 "graiguenamanagh"),
-    "Sligo": ("tubbercurry", "tobercurry", "ballymote", "enniscrone", "finisklin"),
+                 "graiguenamanagh", "the rower"),
+    "Sligo": ("tubbercurry", "tobercurry", "ballymote", "enniscrone", "finisklin",
+              "ballytivnan"),
     "Kerry": ("tralee", "killarney", "listowel", "kenmare", "dingle", "killorglin",
               "castleisland", "cahersiveen"),
-    "Mayo": ("castlebar", "ballina", "westport", "claremorris", "ballinrobe", "swinford"),
+    "Mayo": ("castlebar", "ballina", "westport", "claremorris", "ballinrobe", "swinford",
+             "knock"),
     "Donegal": ("letterkenny", "buncrana", "ballyshannon", "dungloe", "bundoran",
-                "ballybofey", "killybegs", "lifford", "carndonagh", "donegal town"),
+                "ballybofey", "killybegs", "lifford", "carndonagh", "donegal town",
+                "burnfoot"),
     "Roscommon": ("castlerea", "ballaghaderreen", "boyle"),
-    "Offaly": ("tullamore", "birr", "edenderry"),
+    "Offaly": ("tullamore", "birr", "edenderry", "boora"),
     "Laois": ("portlaoise", "portarlington", "mountmellick", "abbeyleix", "rathdowney"),
-    "Leitrim": ("carrick-on-shannon",),
-    "Cavan": ("bailieborough", "cootehill"),
-    "Monaghan": ("carrickmacross", "castleblayney"),
+    "Leitrim": ("carrick-on-shannon", "carrick on shannon"),
+    "Cavan": ("bailieborough", "cootehill", "kingscourt"),
+    "Monaghan": ("carrickmacross", "castleblayney", "ballybay"),
 }
 
 # Names shared with a better-known place abroad, a surname, or an everyday word. They
@@ -193,7 +200,7 @@ _AMBIGUOUS_PLACES = {
     "clare", "kerry", "mayo", "longford", "louth", "ennis", "shannon", "bray", "newbridge",
     "westport", "ballina", "killarney", "listowel", "dingle", "trim", "kells", "ashbourne",
     "portarlington", "birr", "cashel", "mahon", "bandon", "gort", "moate", "charleville",
-    "whitegate", "boyle",
+    "whitegate", "boyle", "knock", "douglas", "togher", "burnfoot",
 }
 # Dundalk, Maryland is a real place too, but it is always written with its state, which
 # rules it out on its own; a bare "Dundalk" is the Louth town (Mr Price's shop, for one).
@@ -218,6 +225,11 @@ _NORTHERN_SIGNAL = re.compile(
     re.IGNORECASE,
 )
 _IRELAND_WORD = re.compile(r"\b(?:ireland|[ée]ire)\b", re.IGNORECASE)
+# The country code glued to a place, as Workday tenants write it: "Cruiserath - IE",
+# "IRL_City North", "IRL DUBL 11-12". Capitals only, so "i.e." is never one.
+_IRELAND_CODE = re.compile(r"(?<![A-Za-z])(?:IE|IRL)(?![A-Za-z])")
+# Ulster is left out: most of it is the North.
+_PROVINCE = re.compile(r"\b(?:munster|leinster|connacht|connaught)\b", re.IGNORECASE)
 
 # Countries a board names after a place abroad, so "Waterford, United Kingdom" is not
 # read as Irish. The US is covered by its states as well as by name.
@@ -225,6 +237,7 @@ _FOREIGN_COUNTRIES = {
     "uk", "united kingdom", "england", "scotland", "wales", "gb", "great britain",
     "australia", "au", "canada", "ca", "new zealand", "nz", "south africa",
     "usa", "us", "united states", "united states of america", "france", "fr",
+    "isle of man", "gibraltar",
 } | _US_SIGNALS
 
 
@@ -335,21 +348,49 @@ def _dublin_followed_by_us_state(text: str) -> bool:
     return False
 
 
+def _names_abroad(tokens: list[str]) -> bool:
+    """Does any entry name a country or US state: "Munster, Germany", "Munster, IN"?"""
+    for token in tokens:
+        word = token.strip()
+        if word.lower() in _FOREIGN_COUNTRIES | _OTHER_COUNTRIES or _is_state(word):
+            return True
+        if len(word) == 2 and word.isupper() and word != "IE":
+            return True
+    return False
+
+
 def _names_ireland(text: str, lowered_tokens: set[str]) -> bool:
-    """Does the string name the Republic itself: "Ireland", "IE", "Co. Cork"?"""
+    """Does the string name the Republic itself: "Ireland", "IE", "Co. Cork", "Munster"?"""
     republic = _NORTHERN_IRELAND.sub(" ", text)
     return bool(
         _IRELAND_WORD.search(republic)
         or (lowered_tokens & _IRELAND_SIGNALS) - {"ireland"}
+        or _IRELAND_CODE.search(republic)
         or _COUNTY_PREFIX.search(republic)
+        or (_PROVINCE.search(republic) and not _names_abroad(_tokenize(republic)))
     )
 
 
-def irish_region(text: str, *, names_ireland: bool) -> str | None:
+def _same_county_pair(tokens: list[str], place: str) -> bool:
+    """Is another place in the same county named too: "Shannon, Clare", "Killarney, Kerry"?
+
+    Either name alone could be somewhere else; a town beside its own county is not.
+    """
+    county = _PLACE_REGION[place]
+    return any(
+        other.group(1).lower() != place and _PLACE_REGION[other.group(1).lower()] == county
+        for token in tokens
+        for other in _IRISH_PLACE.finditer(token)
+    )
+
+
+def irish_region(text: str, *, names_ireland: bool, irish_board: bool = False) -> str | None:
     """The county of the first Irish place the string names, or None.
 
     Each entry of a multi-office list is judged on its own, so in "Cork; Waterford, MI"
-    Cork counts and the Michigan Waterford does not.
+    Cork counts and the Michigan Waterford does not. An ambiguous name ("Clare",
+    "Shannon") counts when Ireland is named, when its own county or town is named beside
+    it, or when it comes from a board whose other jobs are Irish (`irish_board`).
     """
     if _NORTHERN_IRELAND.search(text) and not names_ireland:
         return None
@@ -357,7 +398,9 @@ def irish_region(text: str, *, names_ireland: bool) -> str | None:
     for index, token in enumerate(tokens):
         for match in _IRISH_PLACE.finditer(token):
             place = match.group(1).lower()
-            if place in _AMBIGUOUS_PLACES and not names_ireland:
+            if place in _AMBIGUOUS_PLACES and not (
+                names_ireland or irish_board or _same_county_pair(tokens, place)
+            ):
                 continue
             # The next entry says which country: "Waterford, MI", "Bray, UK".
             following = tokens[index + 1].strip() if index + 1 < len(tokens) else ""
@@ -382,8 +425,9 @@ def normalize_location(
 ) -> LocationResult:
     """Normalize a free-text location.
 
-    `company_is_irish` is an optional registry hint used only to break ties on a bare
-    "Dublin" when the string carries a conflicting US signal.
+    `company_is_irish` is an optional hint that the board is an Irish one: it breaks
+    ties on a bare "Dublin" when the string carries a conflicting US signal, and lets a
+    bare ambiguous name such as "Clare" or "Shannon" count as the Irish place.
     """
     result = LocationResult(raw=raw)
     if not raw or not raw.strip():
@@ -433,7 +477,9 @@ def normalize_location(
         _dublin_followed_by_us_state(text) and not has_ireland_signal
     ):
         # Not a Dublin role. It may still be somewhere else in Ireland.
-        region = irish_region(text, names_ireland=names_ireland)
+        region = irish_region(
+            text, names_ireland=names_ireland, irish_board=company_is_irish is True
+        )
         if region == "Dublin":
             region = None
         result.region = region
