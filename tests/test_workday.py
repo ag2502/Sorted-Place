@@ -247,3 +247,30 @@ def test_irish_offices_outside_dublin_are_selected():
         }
     ]
     assert irish_facets(facets) == [{"locations": ["cork", "tralee"]}]
+
+
+@respx.mock
+def test_a_us_office_named_like_an_irish_town_is_left_out():
+    """Bank of America's branches in Dublin, Ohio and Wexford, Pennsylvania."""
+    ohio = posting(1, "Dublin", "Dublin")
+    pennsylvania = posting(2, "Wexford", "Wexford")
+    cork = posting(3, "Cork", "Cork")
+    tenant = Tenant(
+        [ohio, pennsylvania, cork],
+        facets=[],
+        by_facet=lambda p, applied: False,
+        by_text=lambda p, text: True,
+        details={
+            ohio["externalPath"]: {"location": "Dublin",
+                                   "country": {"descriptor": "United States of America"}},
+            pennsylvania["externalPath"]: {"location": "Wexford",
+                                           "country": {"descriptor": "United States of America"}},
+            cork["externalPath"]: {"location": "Cork", "country": {"descriptor": "Ireland"}},
+        },
+    )
+    tenant.mount()
+
+    result = WorkdayAdapter().fetch(SLUG)
+
+    assert [j.source_job_id for j in result.jobs] == ["R-3"]
+    assert result.jobs[0].location_raw == "Cork, Ireland"

@@ -389,3 +389,28 @@ def test_a_blank_location_job_is_placed_by_its_title() -> None:
 
     result = resolve_location(RawJob("1", "Electrician | Limerick", "https://x"))
     assert result.is_ireland and not result.is_dublin and result.region == "Limerick"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "Belfast, Antrim, Ireland",
+        "Coleraine, Londonderry, Ireland",
+        "Craigavon, Armagh, Ireland",
+        "Newry, BT35 6JQ, Ireland",
+        "Derry, Ireland",
+    ],
+)
+def test_the_north_written_beside_ireland_is_not_the_republic(raw: str) -> None:
+    assert not normalize_location(raw).is_ireland
+
+
+def test_a_list_of_all_counties_is_still_irish() -> None:
+    result = normalize_location("County Antrim, County Armagh, County Carlow, County Cork, Ireland")
+    assert result.is_ireland and result.region == "Carlow"
+    assert normalize_location("Edenderry, Ireland").region == "Offaly"
+
+
+def test_a_dublin_named_with_the_us_is_the_american_one() -> None:
+    assert not normalize_location("Dublin, United States of America").is_ireland
+    assert normalize_location("SF, New York, Seattle, Dublin, Luxembourg").is_dublin

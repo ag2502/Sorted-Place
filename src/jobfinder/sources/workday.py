@@ -312,6 +312,11 @@ class WorkdayAdapter(BaseAdapter):
             description = info.get("jobDescription")
             location = info.get("location") or location
             extra = [loc for loc in info.get("additionalLocations") or [] if loc]
+            # The office's country, which the tenant's own site name may leave out: Bank of
+            # America's "Dublin" and "Wexford" are in Ohio and Pennsylvania.
+            country = (info.get("country") or {}).get("descriptor")
+            if location and country and country.lower() not in location.lower():
+                location = f"{location}, {country}"
             public_url = info.get("externalUrl") or public_url
             req_id = req_id or info.get("jobReqId")
             employment_type = info.get("timeType")

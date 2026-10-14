@@ -218,6 +218,20 @@ _COUNTY_PREFIX = re.compile(
     r"\b(?:co\.?|county)\s+(" + "|".join(IRISH_COUNTIES) + r")\b", re.IGNORECASE
 )
 _NORTHERN_IRELAND = re.compile(r"\bnorthern\s+ireland\b", re.IGNORECASE)
+# The North's counties and towns as its boards write them, bare and beside "Ireland":
+# "Belfast, Antrim, Ireland", "Coleraine, Londonderry, Ireland". With no place in the
+# Republic named too, such a string is in Northern Ireland.
+_NORTHERN_PLACES = {
+    "antrim", "armagh", "down", "fermanagh", "londonderry", "derry", "tyrone",
+    "belfast", "newry", "craigavon", "coleraine", "lisburn", "bangor", "lurgan",
+    "portadown", "ballymena", "ballymoney", "newtownards", "downpatrick", "enniskillen",
+    "omagh", "strabane", "limavady", "magherafelt", "cookstown", "dungannon", "larne",
+    "carrickfergus", "glengormley", "holywood", "banbridge", "newtownabbey", "portrush",
+    "ballyclare", "comber", "ballynahinch", "kilkeel", "warrenpoint", "dungiven",
+}
+_NORTHERN_POSTCODE = re.compile(r"\bBT\d{1,2}\b")
+# A US Dublin named with its country: "Dublin, United States of America" (Workday).
+_US_COUNTRY_NAMES = {"usa", "united states", "united states of america", "u.s.a.", "u.s."}
 # The North named some other way: its six counties, or the UK itself.
 _NORTHERN_SIGNAL = re.compile(
     r"\bnorthern\s+ireland\b|\b(?:co\.?|county)\s+(?:antrim|armagh|down|fermanagh|londonderry|derry|tyrone)\b"
@@ -324,6 +338,7 @@ def _dublin_followed_by_us_state(text: str) -> bool:
             if (
                 next_entry in _SAFE_STATE_CODES
                 or next_entry in _US_STATE_NAMES
+                or next_entry in _US_COUNTRY_NAMES
                 or _is_state_with_zip(next_entry)
             ):
                 return True
@@ -491,7 +506,10 @@ def normalize_location(
         if region == "Dublin":
             region = None
         result.region = region
-        result.is_ireland = bool(region) or names_ireland
+        in_the_north = bool(
+            lowered_tokens & _NORTHERN_PLACES or _NORTHERN_POSTCODE.search(text)
+        )
+        result.is_ireland = bool(region) or (names_ireland and not in_the_north)
         result.location_norm = (
             f"{region}, Ireland" if region else ", ".join(tokens) if tokens else text
         )
