@@ -171,8 +171,45 @@ def _advert_signal(text: str, vocabulary: Vocabulary) -> frozenset[str]:
     return advert.signal
 
 
-@lru_cache(maxsize=50_000)
+# The fields each title falls in, worked out ahead of time by the snapshot build like the
+# skills above. Classifying is a substring scan of every field's terms per title, about
+# 0.6s for a snapshot's titles on a laptop and several times that on a cold Vercel
+# instance, so the build does it once instead.
+_PRECOMPUTED_TITLE_FIELDS: dict[str, tuple[str, ...]] = {}
+
+
+def title_fields_fingerprint() -> str:
+    """Identifies the field terms, so title fields from a snapshot built by different
+    code are ignored rather than trusted."""
+    from jobfinder.normalize import taxonomy
+
+    source = "\n".join(
+        f"{key}:{'|'.join(p.pattern for _, p in terms)}:"
+        f"{'|'.join(taxonomy._FIELD_EXCLUDES.get(key, ()))}"
+        for key, terms in sorted(taxonomy._FIELD_TERMS.items())
+    )
+    return hashlib.sha1(source.encode("utf-8")).hexdigest()
+
+
+def preload_title_fields(fingerprint: str, rows) -> int:
+    """Accept `(title, fields)` pairs computed ahead of time.
+
+    Returns how many were taken - none when they came from different field terms.
+    """
+    if fingerprint != title_fields_fingerprint():
+        return 0
+    for title, fields in rows:
+        _PRECOMPUTED_TITLE_FIELDS[title] = tuple(fields)
+    return len(_PRECOMPUTED_TITLE_FIELDS)
+
+
 def _title_fields(title: str) -> tuple[str, ...]:
+    found = _PRECOMPUTED_TITLE_FIELDS.get(title)
+    return found if found is not None else _classified_title(title)
+
+
+@lru_cache(maxsize=50_000)
+def _classified_title(title: str) -> tuple[str, ...]:
     return tuple(classify_title(title))
 
 

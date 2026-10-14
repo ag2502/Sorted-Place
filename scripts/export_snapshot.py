@@ -69,6 +69,29 @@ def _precompute_skills(target) -> int:
     return len(found) - 1
 
 
+def _precompute_title_fields(target) -> int:
+    """Store the fields each job title falls in, for the same reason as the skills.
+
+    Keyed by the title itself, which is all `rank._title_fields` reads, and carrying a
+    fingerprint of the field terms (see `rank.preload_title_fields`).
+    """
+    from jobfinder.matching.rank import title_fields_fingerprint
+    from jobfinder.normalize.taxonomy import classify_title
+
+    with target.begin() as dst:
+        dst.exec_driver_sql(
+            "create table title_fields (title text primary key, fields text not null)"
+        )
+        titles = {title for (title,) in dst.exec_driver_sql("select title from job_postings")}
+        found = {title: json.dumps(classify_title(title)) for title in titles if title}
+        # No title carries a NUL character, so this key cannot collide with a real one.
+        found["\0fingerprint"] = title_fields_fingerprint()
+        dst.exec_driver_sql(
+            "insert into title_fields (title, fields) values (?, ?)", list(found.items())
+        )
+    return len(found) - 1
+
+
 def export(destination: Path) -> Path:
     """Copy the servable rows from the configured database into a fresh SQLite file."""
     if destination.exists():
@@ -98,6 +121,7 @@ def export(destination: Path) -> Path:
                 dst.execute(insert(table), rows[start : start + CHUNK_ROWS])
 
     totals["advert_skills"] = _precompute_skills(target)
+    totals["title_fields"] = _precompute_title_fields(target)
 
     # Reclaim the pages freed by everything that was not copied; without this the file
     # keeps the source's footprint and the size win disappears.

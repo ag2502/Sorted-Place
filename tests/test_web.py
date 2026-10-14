@@ -887,6 +887,26 @@ def test_precomputed_skills_are_what_ranking_would_have_found():
     assert rank._advert(text).skills == frozenset(extract_skills(text))
 
 
+def test_precomputed_title_fields_from_other_code_are_ignored():
+    from jobfinder.matching import rank
+
+    assert rank.preload_title_fields("not-this-code", [("Chef", ["software-engineering"])]) == 0
+    assert "Chef" not in rank._PRECOMPUTED_TITLE_FIELDS
+
+
+def test_precomputed_title_fields_are_what_ranking_would_have_found():
+    from jobfinder.matching import rank
+    from jobfinder.normalize.taxonomy import classify_title
+
+    title = "Senior Backend Engineer"
+    rank.preload_title_fields(rank.title_fields_fingerprint(), [(title, ["sentinel"])])
+    try:
+        assert rank._title_fields(title) == ("sentinel",)
+    finally:
+        rank._PRECOMPUTED_TITLE_FIELDS.clear()
+    assert rank._title_fields(title) == tuple(classify_title(title))
+
+
 def test_an_early_career_search_hides_no_graduate_job(client):
     """Only a dozen or so graduate jobs are open at a time, and a programme usually takes
     any discipline, so ticking a field orders them rather than hiding most of them."""

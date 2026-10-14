@@ -1633,30 +1633,44 @@ def _grouping_keys(
     }
 
 
-_skills_preloaded = False
+_readings_preloaded = False
 
 
-def _preload_advert_skills() -> None:
-    """Take the skills the snapshot build already found, once per process.
+def _stored_reading(
+    table: str, key: str, value: str, fingerprint_key: str
+) -> tuple[str, dict[str, str]]:
+    """One table of what the snapshot build worked out, and the fingerprint it carries.
 
-    See `rank.preload_skills`. A database without the table - a local crawl database, or
-    a snapshot from before it existed - costs only speed, never correctness.
+    A database without the table - a local crawl database, or a snapshot from before it
+    existed - reads as empty, which costs only speed, never correctness.
     """
-    global _skills_preloaded
-    if _skills_preloaded:
-        return
-    _skills_preloaded = True
     try:
         with engine.connect() as conn:
-            rows = conn.exec_driver_sql(
-                "select advert_hash, skills from advert_skills"
-            ).all()
+            rows = conn.exec_driver_sql(f"select {key}, {value} from {table}").all()
     except Exception:  # noqa: BLE001 - absent table, or not SQLite at all
-        return
+        return "", {}
     stored = dict(rows)
-    fingerprint = stored.pop("fingerprint", "")
+    return stored.pop(fingerprint_key, ""), stored
+
+
+def _preload_snapshot_readings() -> None:
+    """Take what the snapshot build already worked out about each advert, once per process.
+
+    See `rank.preload_skills` and `rank.preload_title_fields`.
+    """
+    global _readings_preloaded
+    if _readings_preloaded:
+        return
+    _readings_preloaded = True
+    fingerprint, stored = _stored_reading(
+        "advert_skills", "advert_hash", "skills", "fingerprint"
+    )
     rank.preload_skills(
         fingerprint, ((key, json.loads(value)) for key, value in stored.items())
+    )
+    fingerprint, stored = _stored_reading("title_fields", "title", "fields", "\0fingerprint")
+    rank.preload_title_fields(
+        fingerprint, ((title, json.loads(value)) for title, value in stored.items())
     )
 
 
@@ -1679,7 +1693,7 @@ def _skill_demand() -> tuple[int, dict[str, frozenset[int]]]:
     with _demand_lock:
         if _demand is not None and time.monotonic() - _demand[0] < _DEMAND_TTL:
             return _demand[1], _demand[2]
-        _preload_advert_skills()
+        _preload_snapshot_readings()
         wanted: dict[str, set[int]] = {}
         with session_scope() as session:
             rows = session.execute(
@@ -1881,7 +1895,7 @@ def _search_results(
         cv_fields=profile.get("cv_fields") or [],
     )
 
-    _preload_advert_skills()
+    _preload_snapshot_readings()
     with session_scope() as session:
         stmt = select(JobPosting).where(_is_offerable())
         if profile.get("include_remote"):
