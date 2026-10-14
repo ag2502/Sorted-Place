@@ -143,7 +143,22 @@ def select_sources(
     if limit:
         stmt = stmt.limit(limit)
 
-    return list(session.execute(stmt).all())
+    pairs = list(session.execute(stmt).all())
+    if all_sources:
+        return pairs
+
+    # The long tail takes turns, stalest first whatever its priority, so a run that
+    # finds every tail source due still stays inside its window.
+    def in_tail(pair) -> bool:
+        source, company = pair
+        return (
+            company.coverage_priority > settings.priority_always_crawl
+            and source.last_success_at is not None
+        )
+
+    tail = sorted((p for p in pairs if in_tail(p)), key=lambda p: p[0].last_success_at)
+    taken = {p[0].id for p in tail[: settings.long_tail_per_run]}
+    return [p for p in pairs if not in_tail(p) or p[0].id in taken]
 
 
 def crawl(

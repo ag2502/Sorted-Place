@@ -76,6 +76,20 @@ def test_long_tail_becomes_due_once_it_goes_stale(session: Session):
     assert slugs == {"smallco"}
 
 
+def test_the_long_tail_takes_turns_stalest_first(session: Session, monkeypatch):
+    """Read every few hours, the tail would all fall due in one run; it is spread."""
+    monkeypatch.setattr(settings, "long_tail_per_run", 2)
+    now = utcnow()
+    for slug, priority, hours in [("a", 3, 30), ("b", 4, 50), ("c", 3, 10)]:
+        _source(session, _company(session, slug.upper(), priority), slug,
+                last_success=now - timedelta(hours=hours))
+    big = _company(session, "Big MNC", priority=1)
+    _source(session, big, "bigmnc", last_success=now)
+
+    slugs = {source.slug for source, _ in select_sources(session)}
+    assert slugs == {"bigmnc", "a", "b"}
+
+
 def test_a_source_that_has_never_succeeded_is_always_due(session: Session):
     """Otherwise a newly-registered company waits a day for its first fetch, and a
     permanently broken one would never be retried at all."""

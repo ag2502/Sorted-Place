@@ -116,9 +116,13 @@ class Settings(BaseSettings):
     # success is older than `stale_after_hours`. A registry of thousands is mostly long
     # tail: re-fetching a 12-person consultancy every hour costs far more than the
     # freshness it buys, while the multinationals that carry most of the roles stay on
-    # every run.
+    # every run. Four hours, not a day: the long tail is where the shops, cafés and care
+    # agencies sit, and read once a day their adverts reached the site a day late and
+    # bunched into one run. `long_tail_per_run` (the stalest first) spreads them out
+    # and keeps a run inside its window.
     priority_always_crawl: int = 2
-    stale_after_hours: int = 24
+    stale_after_hours: int = 4
+    long_tail_per_run: int = 120
 
     # Tier 4 aggregator credentials. Unset by default: every aggregator adapter reports
     # FAILED when its key is missing, which the reconciler treats exactly like an

@@ -184,7 +184,8 @@ Fetching is parallel; reconciliation stays serial on one thread, so the state ma
 guarantees are exactly what they were.
 
 High-priority companies are crawled every run; the long tail waits for
-`stale_after_hours`. Re-fetching a twelve-person consultancy every hour costs far
+`stale_after_hours` (four) and takes turns, stalest first, at most `long_tail_per_run`
+a run. Re-fetching a twelve-person consultancy every hour costs far
 more than the freshness it buys, while the multinationals that carry most of the roles
 stay current.
 
