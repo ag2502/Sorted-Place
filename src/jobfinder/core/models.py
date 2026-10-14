@@ -182,6 +182,7 @@ class JobPosting(Base):
         Index("ix_job_active_dublin", "status", "is_dublin"),
         Index("ix_job_active_ireland", "status", "is_ireland"),
         Index("ix_job_source_status", "source_id", "status"),
+        Index("ix_job_url", "url"),
     )
 
     def __repr__(self) -> str:

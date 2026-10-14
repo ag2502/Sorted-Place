@@ -23,6 +23,8 @@ from jobfinder.core.models import (
     Company,
     CrawlRun,
     CrawlStatus,
+    JobPosting,
+    JobStatus,
     Source,
     utcnow,
 )
@@ -34,6 +36,9 @@ logger = logging.getLogger(__name__)
 
 # Disable a source after this many consecutive failures rather than hammering it.
 CIRCUIT_BREAKER_THRESHOLD = 10
+# How long a disabled source's jobs stay up after its last good crawl. Ten failures can
+# be one bad evening, and an outage is not evidence a job closed; two quiet days are.
+DISABLED_GRACE = timedelta(days=2)
 
 
 @dataclass
@@ -56,6 +61,46 @@ class RunSummary:
             f"+{self.created} new, {self.updated} refreshed, "
             f"{self.closed} closed, {self.reopened} reopened"
         )
+
+
+def close_disabled_sources(session: Session) -> int:
+    """Close the open jobs of every source switched off and quiet for `DISABLED_GRACE`.
+
+    A disabled source is never crawled again, so nothing else would ever close its jobs:
+    HubSpot's moved board kept forty dead adverts on the site for a week, and Early
+    Childhood Ireland's old board kept seventy beside the same jobs read from its new
+    one. A job that lives on under another source with the same advert keeps the date
+    we first found it there, so a board moving house is not counted as new jobs.
+    Re-enabling a source reopens whatever it still lists on its next crawl.
+    """
+    jobs = session.execute(
+        select(JobPosting)
+        .join(Source, JobPosting.source_id == Source.id)
+        .where(
+            Source.enabled.is_(False),
+            JobPosting.status == JobStatus.ACTIVE,
+            or_(
+                Source.last_success_at.is_(None),
+                Source.last_success_at < utcnow() - DISABLED_GRACE,
+            ),
+        )
+    ).scalars().all()
+    now = utcnow()
+    for job in jobs:
+        job.status = JobStatus.CLOSED
+        job.closed_at = now
+        for twin in session.execute(
+            select(JobPosting).where(
+                JobPosting.url == job.url,
+                JobPosting.id != job.id,
+                JobPosting.first_seen_at > job.first_seen_at,
+            )
+        ).scalars():
+            twin.first_seen_at = job.first_seen_at
+    if jobs:
+        logger.info("closed %d jobs of disabled sources", len(jobs))
+    session.flush()
+    return len(jobs)
 
 
 def select_sources(
@@ -157,6 +202,8 @@ def crawl(
             )
 
         session.flush()
+
+    summary.closed += close_disabled_sources(session)
 
     run.finished_at = utcnow()
     run.sources_ok = summary.sources_ok

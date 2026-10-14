@@ -65,6 +65,8 @@ def add_missing_columns() -> list[str]:
         connection.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_job_active_ireland ON job_postings (status, is_ireland)"
         ))
+        # A new posting looks up its advert's address to keep an earlier first-seen date.
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_job_url ON job_postings (url)"))
 
     return added
 

@@ -27,9 +27,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from jobfinder.core.config import settings
@@ -266,6 +266,17 @@ def _upsert_jobs(
 
         job = existing.get(raw.source_job_id)
         if job is None:
+            # The same advert already known through another source (a board that moved
+            # address, an aggregator) is not new: it keeps the date we first found it.
+            earlier = session.scalar(
+                select(func.min(JobPosting.first_seen_at)).where(
+                    JobPosting.url == raw.url,
+                    or_(
+                        JobPosting.status == JobStatus.ACTIVE,
+                        JobPosting.closed_at >= now - timedelta(days=7),
+                    ),
+                )
+            ) if raw.url else None
             session.add(
                 JobPosting(
                     company_id=job_company.id,
@@ -289,7 +300,7 @@ def _upsert_jobs(
                     is_graduate=experience.is_graduate,
                     employment_type=(raw.employment_type or "")[:64] or None,
                     is_part_time=part_time,
-                    first_seen_at=now,
+                    first_seen_at=earlier or now,
                     last_seen_at=now,
                     status=JobStatus.ACTIVE,
                     consecutive_misses=0,

@@ -221,3 +221,61 @@ def test_unknown_adapter_is_recorded_as_failure_not_a_crash(session):
 
     summary = crawl(session, all_sources=True)
     assert summary.sources_failed == 1
+
+
+def test_a_disabled_source_keeps_its_jobs_through_a_short_outage(
+    session, adapter, scripted_source
+):
+    adapter.script = [_ok("a", "b"), FetchResult.failed("boom")]
+    for _ in range(CIRCUIT_BREAKER_THRESHOLD + 1):
+        crawl(session, all_sources=True)
+    session.flush()
+
+    assert scripted_source.enabled is False
+    assert _active_ids(session) == {"a", "b"}, "ten failures in a day is an outage"
+
+
+def test_a_long_disabled_source_has_its_jobs_closed(session, adapter, scripted_source):
+    """HubSpot's board moved and its forty adverts stayed on the site for a week."""
+    from datetime import timedelta
+
+    from jobfinder.core.models import utcnow
+    from jobfinder.pipeline.run import close_disabled_sources
+
+    adapter.script = [_ok("a", "b")]
+    crawl(session, all_sources=True)
+    scripted_source.enabled = False
+    scripted_source.last_success_at = utcnow() - timedelta(days=3)
+    session.flush()
+
+    assert close_disabled_sources(session) == 2
+    assert _active_ids(session) == set()
+
+
+def test_an_advert_that_moves_source_keeps_its_first_seen_date(
+    session, adapter, scripted_source
+):
+    """Early Childhood Ireland's board moved address; its jobs were not new that day."""
+    from datetime import timedelta
+
+    from jobfinder.core.models import utcnow
+
+    adapter.script = [_ok("a")]
+    crawl(session, all_sources=True)
+    old = session.execute(select(JobPosting)).scalar_one()
+    old.first_seen_at = utcnow() - timedelta(days=4)
+    scripted_source.enabled = False
+    session.flush()
+
+    moved = Source(company_id=scripted_source.company_id, adapter="scripted", slug="moved")
+    session.add(moved)
+    session.flush()
+    crawl(session, all_sources=True)
+    session.flush()
+
+    twin = session.execute(
+        select(JobPosting).where(JobPosting.source_id == moved.id)
+    ).scalar_one()
+    session.expire_all()
+    assert twin.url == old.url
+    assert twin.first_seen_at == old.first_seen_at
