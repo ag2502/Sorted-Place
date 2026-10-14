@@ -8,6 +8,9 @@
 {# The Appearance choice, applied before anything paints, so a dark page never flashes
    white first. See the Appearance control at the end of this file. #}
 <script>try{if(localStorage.getItem('sp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');document.querySelector('meta[name="color-scheme"]').setAttribute('content','dark')}}catch(e){}</script>
+{# The counts running up play on the first page of a visit only: replayed on every page
+   change, a count inside a sentence re-wrapped the line as it grew. #}
+<script>try{if(sessionStorage.getItem('sp-seen'))document.documentElement.classList.add('seen')}catch(e){}</script>
 <title>{% block title %}Sorted Place: every job in Ireland, in one place{% endblock %}</title>
 <meta name="description" content="{% block description %}Every job open in Ireland right now, gathered from companies' own careers pages so you do not have to check them one by one.{% endblock %}">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='9' width='20' height='16' rx='4' fill='%23c9ced6'/%3E%3Crect x='9' y='5' width='20' height='16' rx='4' fill='%232b74f0'/%3E%3Ccircle cx='13' cy='9' r='1.4' fill='%23fff'/%3E%3Ccircle cx='17' cy='9' r='1.4' fill='%23fff'/%3E%3C/svg%3E">
@@ -45,7 +48,9 @@
 
 /* No cross-page view transition. It holds the old page on screen until the new one is
    ready and then fades between them, which in Safari read as the site stalling on every
-   click. A plain navigation paints the new page as soon as it can. */
+   click. A plain navigation paints the new page as soon as it can, and the page beneath
+   the menu bar fades in once, whole (main, below), so a click never shows it arriving
+   in pieces. */
 
 :root{
   /* the desktop */
@@ -341,6 +346,28 @@ a{color:inherit;text-underline-offset:3px;text-decoration-thickness:1px}
 html.sheet-open,html.sheet-open body{overflow:hidden}
 
 main{flex:1 0 auto;padding:0 0 110px}
+/* Opacity only, and not held after it ends: a transform or a lasting stacking context on
+   main would move the fixed panels and sheets inside it. */
+@media (prefers-reduced-motion:no-preference){
+  main{animation:page-in .22s var(--ease) backwards}
+}
+@keyframes page-in{from{opacity:0}}
+
+/* The arrival: a page's headline, lede, facts and buttons (.arrive) rise into place one
+   after another, and the window beside them (.arrive-win) opens a beat later. Pure CSS,
+   so it starts on the first paint and runs as one sequence, never a hidden page that
+   script reveals in pieces. The individual translate and scale properties leave each
+   window's own tilt (transform) alone. */
+@media (prefers-reduced-motion:no-preference){
+  .arrive > *{animation:arrive .62s var(--ease) backwards}
+  .arrive > :nth-child(2){animation-delay:.07s}
+  .arrive > :nth-child(3){animation-delay:.13s}
+  .arrive > :nth-child(4){animation-delay:.18s}
+  .arrive > :nth-child(n+5){animation-delay:.22s}
+  .arrive-win:not(.is-shut){animation:arrive-win .8s var(--ease) .12s backwards}
+}
+@keyframes arrive{from{opacity:0;translate:0 20px}}
+@keyframes arrive-win{from{opacity:0;translate:0 28px;scale:.95}}
 .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
 
 /* ------------------------------------------------------------- windows --- */
@@ -396,7 +423,7 @@ p{margin:0 0 14px;max-width:var(--measure)}
   padding:0 .06em;border-radius:3px;
 }
 @media (prefers-reduced-motion:no-preference){
-  .js .hl{background-size:0% 42%;animation:hl .9s .45s var(--ease) forwards}
+  .js .hl{background-size:0% 42%;animation:hl .8s .32s var(--ease) forwards}
 }
 @keyframes hl{to{background-size:100% 42%}}
 
@@ -988,14 +1015,17 @@ hr.rule{border:0;border-top:1px solid var(--line);margin:26px 0}
 #results.htmx-request + .skel{display:block}
 
 /* ---------------------------------------------------------------- motion -- */
-/* One grammar: things open like windows do. Everything is visible without JS; the
-   hidden start state only applies when JS is here and motion is welcome. */
+/* One grammar: things open like windows do. Everything is visible without JS, and
+   whatever is on the first screen when a page arrives is simply there: only rows a search
+   swaps in (html.settled) and windows still below the fold (.is-shut, set by the script)
+   start hidden and open. Hiding the first screen and opening it piece by piece is what
+   made every page change look choppy. */
 @media (prefers-reduced-motion:no-preference){
-  .js .filing{opacity:0;transform:translateY(10px)}
+  html.settled .filing{opacity:0;transform:translateY(10px)}
   .js .filing.filed-in{opacity:1;transform:none;
     transition:opacity .45s var(--ease),transform .6s var(--ease)}
-  .js .opens{opacity:0;transform:translateY(18px) scale(.975)}
-  .js .opens.is-open{opacity:1;transform:none;
+  .js .opens.is-shut{opacity:0;transform:translateY(18px) scale(.975)}
+  .js .opens.is-shut.is-open{opacity:1;transform:none;
     transition:opacity .5s var(--ease),transform .7s var(--ease)}
 }
 
@@ -1716,20 +1746,23 @@ document.addEventListener('submit', function (e) {
     tick(); setInterval(tick, 15000);
   }
 
-  // Rows file into a list, a few at a time, and never take long about it.
-  function fileIn(root) {
+  // Rows file into a list, a few at a time, and never take long about it. The rows a
+  // page arrives with are simply there; only rows a search swaps in file in.
+  function fileIn(root, now) {
     var rows = (root || document).querySelectorAll('.filing:not(.filed-in)');
     Array.prototype.forEach.call(rows, function (el, i) {
-      if (reduced.matches) { el.classList.add('filed-in'); return; }
+      if (now || reduced.matches) { el.classList.add('filed-in'); return; }
       setTimeout(function () { el.classList.add('filed-in'); }, Math.min(i, 14) * 34);
     });
   }
-  fileIn(document);
+  fileIn(document, true);
+  document.documentElement.classList.add('settled');
   // The whole document, not the swap's target: Show more swaps its button out for the rows,
   // so the target it reports has already left the page.
   document.body.addEventListener('htmx:afterSwap', function () { fileIn(document); opens(document); });
 
-  // Windows open as they scroll into view.
+  // Windows open as they scroll into view. One already on screen when the page arrives
+  // is left open from the first paint (.is-shut is what hides a window).
   var io = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
       if (!entry.isIntersecting) return;
@@ -1738,16 +1771,20 @@ document.addEventListener('submit', function (e) {
       io.unobserve(el);
     });
   }, { rootMargin: '0px 0px -2% 0px' }) : null;
-  function opens(root) {
+  function onScreen(el) { return el.getBoundingClientRect().top < innerHeight; }
+  function opens(root, arriving) {
     Array.prototype.forEach.call((root || document).querySelectorAll('.opens:not(.is-open)'), function (el) {
-      if (reduced.matches || !io) el.classList.add('is-open'); else io.observe(el);
+      if (reduced.matches || !io || (arriving && onScreen(el))) { el.classList.add('is-open'); return; }
+      el.classList.add('is-shut');
+      io.observe(el);
     });
   }
-  opens(document);
+  opens(document, true);
 
-  // Headings made of plain words are split so each word can rise on its own.
+  // Headings made of plain words are split so each word can rise on its own, when they
+  // scroll into view. One on screen as the page arrives is left as it is.
   Array.prototype.forEach.call(document.querySelectorAll('.reveal'), function (h) {
-    if (reduced.matches || h.children.length) { h.classList.add('is-in'); return; }
+    if (reduced.matches || h.children.length || onScreen(h)) { h.classList.add('is-in'); return; }
     var words = h.textContent.trim().split(/\s+/);
     h.setAttribute('aria-label', h.textContent.trim());
     h.innerHTML = words.map(function (w, i) {
@@ -1776,7 +1813,10 @@ document.addEventListener('submit', function (e) {
     el.textContent = m[1] + '0' + m[3];
     requestAnimationFrame(step);
   }
-  Array.prototype.forEach.call(document.querySelectorAll('[data-count]'), countUp);
+  if (!document.documentElement.classList.contains('seen')) {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-count]'), countUp);
+  }
+  try { sessionStorage.setItem('sp-seen', '1'); } catch (e) {}
 
   // The dock: icons swell as the pointer passes over them, and the ones either side
   // slide apart to make room. Only transforms change, so nothing around the dock moves.

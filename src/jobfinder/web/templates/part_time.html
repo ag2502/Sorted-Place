@@ -52,7 +52,7 @@
 <form id="pt" action="/part-time" method="get" hidden></form>
 
 <section class="pt-hero wrap">
-  <div class="pt-hero__copy">
+  <div class="pt-hero__copy arrive">
     <h1 class="pt-hero__h">Part-time work that fits <span class="hl">around your week.</span></h1>
     <p class="lede">
       <strong data-count>{{ "{:,}".format(total) }} part-time jobs</strong> are open in Ireland right
@@ -76,7 +76,7 @@
   {# The week planner. The ticks are real checkboxes in the row and column heads; the
      grid of cells is a picture of them, painted with the highlighter, which the script
      also lets you tap. #}
-  <section class="win pt-week opens" id="when" aria-labelledby="week-h">
+  <section class="win pt-week opens arrive-win" id="when" aria-labelledby="week-h">
     {{ titlebar("my-week.ics") }}
     <div class="pt-week__body">
       <div class="pt-week__head">
@@ -364,7 +364,7 @@
     box-shadow:0 0 0 2px var(--surface),0 10px 20px -8px rgba(43,116,240,.8)}
   .tiles__hint{position:absolute;right:12px;top:8px;margin:0;font-size:18px;color:var(--ink-3);transform:rotate(4deg)}
   @media (prefers-reduced-motion:no-preference){
-    .js .pt-map:not(.is-open) .tile{opacity:0;transform:scale(.6)}
+    .js .pt-map.is-shut:not(.is-open) .tile{opacity:0;transform:scale(.6)}
     .js .pt-map .tile{transition-delay:calc((var(--c) + var(--r)) * 28ms),calc((var(--c) + var(--r)) * 28ms),0s,0s,0s}
     .js .pt-map.is-settled .tile{transition-delay:0s}
   }

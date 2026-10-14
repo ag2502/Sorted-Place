@@ -57,7 +57,7 @@
     </p>
   </div>
 
-  <div class="desk__copy">
+  <div class="desk__copy arrive">
     <h1 id="desk-title">Every job in Ireland, <span class="hl">sorted.</span></h1>
     <p class="lede">
       <strong>{{ "{:,}".format(ireland_count) }} jobs</strong> open right now at
@@ -512,8 +512,8 @@
   .pulse__table td:last-child,.pulse__table th:last-child{text-align:right;font-variant-numeric:tabular-nums}
   /* The bars grow up from the baseline as the window opens, a few at a time. */
   @media (prefers-reduced-motion:no-preference){
-    .js .pulsewin .pulse__bar{transform:scaleY(0)}
-    .js .pulsewin.is-open .pulse__bar{transform:none;transition:transform .7s var(--spring) calc(var(--i) * 18ms + 250ms),opacity .15s var(--ease)}
+    .js .pulsewin.is-shut .pulse__bar{transform:scaleY(0)}
+    .js .pulsewin.is-shut.is-open .pulse__bar{transform:none;transition:transform .7s var(--spring) calc(var(--i) * 18ms + 250ms),opacity .15s var(--ease)}
   }
   /* Windows High Contrast drops background colours, which would erase the bars: there
      they are drawn in the system's text colour, today's in its highlight. */

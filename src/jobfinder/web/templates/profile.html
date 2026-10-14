@@ -6,7 +6,7 @@
 {% block content %}
 
 {% if not account %}
-<section class="pagehead">
+<section class="pagehead arrive">
   <h1>Your profile.</h1>
   <div class="card">
     <p class="error">{{ error }}</p>
@@ -20,7 +20,7 @@
 <section class="me">
   <div class="me__id">
     {{ avatar(account, "avatar--xl") }}
-    <div class="me__text">
+    <div class="me__text arrive">
       <h1>Hi, {{ first }}.</h1>
       <p class="me__meta">
         <span class="me__email">{{ account.email }}</span>
@@ -53,7 +53,7 @@
 {% endif %}
 
 {# The CV: added once here, used by every search. #}
-<section class="win cvwin opens" id="cv" aria-label="Your CV">
+<section class="win cvwin opens arrive-win" id="cv" aria-label="Your CV">
   {{ titlebar("your-cv") }}
   {% include "_cv_panel.html" %}
 </section>
@@ -62,7 +62,7 @@
 
 
   {% set cv_fields = me.cv.fields if me.cv else [] %}
-  <section class="win profilewin opens" aria-label="Your jobs" data-delay="80">
+  <section class="win profilewin opens arrive-win" aria-label="Your jobs" data-delay="80" style="animation-delay:.2s">
     {{ titlebar("profile: " ~ account.email) }}
     <div class="tabs" role="tablist" aria-label="Your jobs">
       <a role="tab" id="tab-saved" href="/profile?tab=saved" aria-controls="panel-saved"

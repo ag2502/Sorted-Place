@@ -11,7 +11,7 @@
 
 {% block wide %}
 <section class="co-hero wrap">
-  <div class="co-hero__copy">
+  <div class="co-hero__copy arrive">
     <h1><span>{{ "{:,}".format(employers_hiring) }}</span> companies are hiring in Ireland <span class="hl">right now.</span></h1>
     <p class="lede">
       {#- Gathered first and joined after, so the sentence reads right whichever groups
@@ -34,7 +34,7 @@
     </div>
   </div>
 
-  <aside class="win getinfo opens" aria-label="About this list">
+  <aside class="win getinfo opens arrive-win" aria-label="About this list">
     {{ titlebar("companies: get info") }}
     <div class="getinfo__top">
       <span class="getinfo__icon" aria-hidden="true">
@@ -61,7 +61,7 @@
   </div>
   <ul class="launch__grid opens">
     {% for e in top %}
-    <li class="launch__item">
+    <li class="launch__item" style="--k:{{ loop.index0 }}">
       <button type="button" class="app" data-company="{{ e.id }}" data-name="{{ e.name }}">
         <span class="app__icon">{{ logo(e.name, e.domain, "logo--lg") }}<span class="badge">{{ e.jobs }}</span></span>
         <span class="app__name">{{ e.name }}</span>
@@ -190,6 +190,14 @@
     .app:hover .app__icon .logo{animation:jiggle .5s var(--ease)}
   }
   @keyframes jiggle{0%,100%{rotate:0deg}25%{rotate:-6deg}60%{rotate:5deg}}
+  /* On arrival the big names follow the headline in, the icons springing up left to
+     right as a dock's do. Below the fold (.is-shut) the window's own opening does it. */
+  @media (prefers-reduced-motion:no-preference){
+    .launch__head{animation:arrive .62s var(--ease) .18s backwards}
+    .launch__grid:not(.is-shut) .launch__item{animation:dock-in .6s var(--spring) backwards;
+      animation-delay:calc(.24s + var(--k, 0) * 35ms)}
+  }
+  @keyframes dock-in{from{opacity:0;translate:0 16px;scale:.82}}
   .app:active .app__icon{transform:scale(.92);transition-duration:.1s}
   .app__name{font-size:13px;font-weight:550;line-height:1.25;text-align:center;
     max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;

@@ -14,7 +14,7 @@
 <form id="evf" action="/events" method="get" hidden></form>
 
 <section class="ev-hero wrap">
-  <div class="ev-hero__copy">
+  <div class="ev-hero__copy arrive">
     <h1>Careers events across Ireland, <span class="hl">on one page.</span></h1>
     <p class="lede">
       <strong>{{ "{:,}".format(ahead_total) }} events</strong> coming up: job fairs, graduate
@@ -36,7 +36,7 @@
 
   {# A month at a glance. Each day with something starting on it is a button that
      narrows the list to that day; the arrows step a month at a time. #}
-  <section class="win ev-cal opens" aria-labelledby="cal-h" data-cal>
+  <section class="win ev-cal opens arrive-win" aria-labelledby="cal-h" data-cal>
     {{ titlebar("calendar.app") }}
     <div class="ev-cal__body">
       {% for m in calendar %}
