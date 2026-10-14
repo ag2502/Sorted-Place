@@ -110,13 +110,17 @@ def parse(doc: dict) -> RawJob | None:
     if not nid or not title:
         return None
     kinds = doc.get("opportunityType") or []
+    kind = ", ".join(kinds) if isinstance(kinds, list) else str(kinds)
     return RawJob(
         source_job_id=str(nid),
         title=html.unescape(title),
         url=ORIGIN + (doc.get("path") or f"/node/{nid}"),
         location_raw=_location(doc),
         description=doc.get("body"),
-        department=", ".join(kinds) if isinstance(kinds, list) else str(kinds),
+        department=kind,
+        # "Graduate scheme", "Internship", "Placement": what the role is, whatever its
+        # title says (Tirlán's graduate programme is titled "Finance Associate").
+        employment_type=kind or None,
         company_name=_employer(doc),
     )
 

@@ -28,6 +28,7 @@ def test_a_listing_is_filed_under_its_employer_with_an_irish_location():
     assert job.location_raw == "Tallaght, Ireland"
     assert job.url == "https://gradireland.com/jobs/graduate-software-engineer-1"
     assert job.department == "Graduate scheme"
+    assert job.employment_type == "Graduate scheme"
 
 
 def test_regions_stand_in_when_there_is_no_free_text_location():
