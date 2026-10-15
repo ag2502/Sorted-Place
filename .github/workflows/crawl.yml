@@ -193,10 +193,11 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         # Vercel keeps every deployment, and on the free plan their bundles share a 10 GB
-        # allowance that hourly deploys filled in under a week. Keeps the live one and
-        # two before it for rollback. A failed cleanup must not fail a crawl that worked.
+        # allowance that hourly deploys filled in under a week; over it, Vercel can refuse
+        # deploys. At 90% this deletes the oldest down to 60%, never the live one or the
+        # five newest. A failed cleanup must not fail a crawl that worked.
         continue-on-error: true
-        run: python scripts/prune_vercel_deployments.py --keep 3 --dry-run
+        run: python scripts/prune_vercel_deployments.py --keep 5 --high 90 --low 60 --dry-run
 
       - name: Send email alerts
         env:

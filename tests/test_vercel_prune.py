@@ -18,35 +18,49 @@ def _d(uid: str, created: int, state: str = "READY", target: str | None = "produ
     return {"uid": uid, "created": created, "state": state, "target": target}
 
 
-def _deleted(deployments, production_id, keep):
-    return {d["uid"] for d in prune.choose_deletions(deployments, production_id, keep)}
+def _plan(deployments, live, keep=5, high=90, low=60):
+    # 10 deployments of 100 MB in a 1000 MB cap: each one is 10%.
+    before, doomed, after = prune.plan_deletions(
+        deployments, live, keep=keep, deployment_mb=100, limit_mb=1000, high=high, low=low
+    )
+    return before, [d["uid"] for d in doomed], after
 
 
-def test_keeps_the_newest_ready_production_deployments():
-    deployments = [_d(f"d{i}", i) for i in range(10)]
-    assert _deleted(deployments, "d9", keep=3) == {f"d{i}" for i in range(7)}
+def _ten():
+    return [_d(f"d{i}", i) for i in range(10)]
 
 
-def test_never_deletes_the_live_deployment_even_when_it_is_not_the_newest():
+def test_does_nothing_below_the_high_mark():
+    assert _plan(_ten()[:8], "d7") == (80, [], 80)
+
+
+def test_deletes_oldest_first_down_to_the_low_mark():
+    assert _plan(_ten(), "d9") == (100, ["d0", "d1", "d2", "d3"], 60)
+
+
+def test_keeps_the_newest_five_even_if_that_stays_above_the_low_mark():
+    before, doomed, after = _plan(_ten(), "d9", low=20)
+    assert doomed == ["d0", "d1", "d2", "d3", "d4"]
+    assert after == 50
+
+
+def test_never_deletes_the_live_deployment_even_when_it_is_old():
     # After a rollback the live deployment is older than the ones after it.
-    deployments = [_d(f"d{i}", i) for i in range(10)]
-    assert "d2" not in _deleted(deployments, "d2", keep=3)
+    _, doomed, _ = _plan(_ten(), "d0", low=0)
+    assert "d0" not in doomed
 
 
 def test_leaves_deployments_still_building():
-    deployments = [_d("old", 1), _d("live", 2), _d("building", 3, state="BUILDING")]
-    assert _deleted(deployments, "live", keep=1) == {"old"}
+    deployments = _ten() + [_d("building", 10, state="BUILDING")]
+    _, doomed, _ = _plan(deployments, "d9", low=0)
+    assert "building" not in doomed
 
 
-def test_deletes_failed_and_preview_deployments():
-    deployments = [
-        _d("live", 5),
-        _d("failed", 6, state="ERROR"),
-        _d("preview", 7, target=None),
-    ]
-    assert _deleted(deployments, "live", keep=3) == {"failed", "preview"}
+def test_failed_deployments_go_without_counting_toward_usage():
+    deployments = [_d("failed", -1, state="ERROR")] + _ten()
+    assert _plan(deployments, "d9") == (100, ["failed", "d0", "d1", "d2", "d3"], 60)
 
 
 def test_reads_ready_state_when_state_is_absent():
-    deployments = [{"uid": f"d{i}", "created": i, "readyState": "READY", "target": "production"} for i in range(4)]
-    assert _deleted(deployments, "d3", keep=2) == {"d0", "d1"}
+    deployments = [{"uid": f"d{i}", "created": i, "readyState": "READY", "target": "production"} for i in range(10)]
+    assert _plan(deployments, "d9")[1] == ["d0", "d1", "d2", "d3"]
