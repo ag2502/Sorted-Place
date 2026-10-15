@@ -149,12 +149,14 @@ def main() -> int:
     )
     before, doomed, after = plan_deletions(deployments, production_id, high=args.high, **plan)
     ready = sum(1 for d in deployments if _state(d) == "READY")
+    # As notices so the outcome shows on the run's summary page, which anyone can read;
+    # the full log needs a GitHub login.
     print(
-        f"{len(deployments)} deployments ({ready} ready), live is {production_id}. "
+        f"::notice::{len(deployments)} deployments ({ready} ready), live is {production_id}. "
         f"Estimated usage {before:.0f}% at {args.deployment_mb:g} MB each."
     )
     if not doomed:
-        print(f"Below {args.high:g}%, nothing to delete.")
+        print(f"::notice::Below {args.high:g}%, nothing to delete.")
         if not args.dry_run:
             return 0
         # Show what a cleanup would remove if it ran now, so the list can be reviewed.
@@ -176,7 +178,7 @@ def main() -> int:
         except urllib.error.HTTPError as exc:
             failed += 1
             print(f"::warning::Could not delete {d['uid']}: HTTP {exc.code}")
-    print(f"Deleted {len(doomed) - failed} of {len(doomed)}, leaving an estimated {after:.0f}%.")
+    print(f"::notice::Deleted {len(doomed) - failed} of {len(doomed)}, leaving an estimated {after:.0f}%.")
     return 1 if failed else 0
 
 
