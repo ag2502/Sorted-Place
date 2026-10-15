@@ -197,7 +197,7 @@ jobs:
         # deploys. At 90% this deletes the oldest down to 60%, never the live one or the
         # five newest. A failed cleanup must not fail a crawl that worked.
         continue-on-error: true
-        run: python scripts/prune_vercel_deployments.py --keep 5 --high 90 --low 60 --dry-run
+        run: python scripts/prune_vercel_deployments.py --keep 5 --high 90 --low 60
 
       - name: Send email alerts
         env:
