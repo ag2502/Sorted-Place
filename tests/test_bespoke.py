@@ -275,3 +275,46 @@ def test_google_location_drops_the_icon_ligature():
     _, _, location = GoogleAdapter()._detail(url, httpx.Client())
 
     assert location == "Dublin, Ireland; London, UK"
+
+
+BESTSELLER_ADVERT = """<article-with-aside itemscope itemtype="http://schema.org/JobPosting">
+<meta itemprop="datePosted" content="Fri Oct 09 11:00:38 UTC 2026">
+<aside><aside-job-details><meta-data>
+<meta-data-item name="item_country" value="Ireland"></meta-data-item>
+<meta-data-item name="item_type" value="Part time"></meta-data-item>
+</meta-data></aside-job-details></aside>
+<article itemprop="description"><rich-text-cleaned><p>Seasonal Sales Assistant, Vero Moda Tullamore.</p></rich-text-cleaned></article>
+</article-with-aside>"""
+
+
+@respx.mock
+def test_bestseller_keeps_irish_roles_and_reads_their_hours():
+    from jobfinder.sources.bespoke import bestseller
+
+    listing = [
+        {"Url": "/careers/jobs/job-detail-vero-moda/30504", "JobTitle": "Vero Moda Tullamore - Seasonal Sales Assistant",
+         "JobDepartment": "Retail (Store)", "JobCountry": "Tullamore, IE"},
+        {"Url": "/careers/jobs/job-detail-jackjones/29343", "JobTitle": "Team Leader",
+         "JobDepartment": "Retail (Store)", "JobCountry": "Etobicoke, CA"},
+    ]
+    # The list is a JSON string holding the JSON list.
+    respx.get(bestseller.JOBS_URL).mock(return_value=httpx.Response(200, json=json.dumps(listing)))
+    respx.get("https://bestseller.com/careers/jobs/job-detail-vero-moda/30504").mock(
+        return_value=httpx.Response(200, text=BESTSELLER_ADVERT))
+
+    result = bestseller.BestsellerAdapter().fetch("IE")
+
+    assert result.status is CrawlStatus.OK
+    [job] = result.jobs
+    assert (job.source_job_id, job.location_raw, job.employment_type) == ("30504", "Tullamore, Ireland", "Part time")
+    assert "Vero Moda Tullamore" in job.description
+    assert job.posted_at.year == 2026
+    assert resolve_location(job).region == "Offaly"
+
+
+@respx.mock
+def test_bestseller_empty_list_fails():
+    from jobfinder.sources.bespoke import bestseller
+
+    respx.get(bestseller.JOBS_URL).mock(return_value=httpx.Response(200, json="[]"))
+    assert bestseller.BestsellerAdapter().fetch("IE").status is CrawlStatus.FAILED
