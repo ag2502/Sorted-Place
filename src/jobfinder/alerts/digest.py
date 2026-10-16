@@ -1,8 +1,11 @@
 """Build and send each subscriber's digest of newly opened jobs.
 
 Runs after every crawl (crawl.yml), and sends to a subscriber only when three things
-hold: an alert is on, it is due (a day, or a week, since the last one), and something
-new has opened that it covers. An email with nothing in it is never sent.
+hold: an alert is on, it is due, and something new has opened that it covers. An email
+with nothing in it is never sent.
+
+Every digest goes out at one time of day, 11:00 in Ireland, and covers what opened since
+the one before: the last 24 hours for a daily alert, the last week for a weekly one.
 
 What counts as new is deliberately strict. A job must have been first seen after the
 subscriber's last email, and, where the employer gives a posting date, posted within a
@@ -21,9 +24,10 @@ import logging
 import smtplib
 import ssl
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr, parseaddr
+from zoneinfo import ZoneInfo
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -33,7 +37,13 @@ from jobfinder.web.links import safe_link
 
 logger = logging.getLogger(__name__)
 
-DUE_AFTER = {"daily": timedelta(hours=20), "weekly": timedelta(days=6, hours=20)}
+DUBLIN = ZoneInfo("Europe/Dublin")
+# The morning send, Irish time, summer or winter. Nothing sends before it; the first
+# crawl after it does. The crawl is dispatched on the hour (crawl.yml), so mail lands a
+# few minutes past eleven, and a crawl that is late sends late rather than skipping a day.
+SEND_AT = time(11, 0)
+# A weekly alert waits for the seventh morning after its last email.
+WEEKLY_GAP = timedelta(days=6)
 # An advert whose own date is this much older than the last email is not new, however
 # recently we first read it.
 POSTED_GRACE = timedelta(days=7)
@@ -84,9 +94,20 @@ def _time(value) -> datetime | None:
     return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(timezone.utc)
 
 
+def send_slot(now: datetime) -> datetime:
+    """Today's send time in Ireland, in UTC."""
+    day = now.astimezone(DUBLIN).date()
+    return datetime.combine(day, SEND_AT, DUBLIN).astimezone(timezone.utc)
+
+
 def is_due(row: dict, now: datetime) -> bool:
+    """Past this morning's send time, and not yet sent this morning (or this week)."""
+    slot = send_slot(now)
+    if now < slot:
+        return False
     last = _time(row.get("last_sent_at"))
-    return last is None or now - last >= DUE_AFTER.get(row.get("frequency"), DUE_AFTER["daily"])
+    gap = WEEKLY_GAP if row.get("frequency") == "weekly" else timedelta(0)
+    return last is None or last < slot - gap
 
 
 def since_for(row: dict) -> datetime:
@@ -247,6 +268,9 @@ def run(*, dry_run: bool = False, now: datetime | None = None) -> Summary:
     if not settings.smtp_host and not dry_run:
         summary.notes.append("no SMTP host set: reporting only, nothing sent")
     now = now or datetime.now(timezone.utc)
+    if now < send_slot(now):
+        summary.notes.append(f"before {SEND_AT:%H:%M} in Ireland: nothing is due until then")
+        return summary
     rows = service.subscribers()
     summary.subscribers = len(rows)
     due = [r for r in rows if is_due(r, now)][:MAX_EMAILS]

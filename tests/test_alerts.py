@@ -11,7 +11,8 @@ import pytest
 from jobfinder.alerts import digest, service
 from jobfinder.core.config import settings
 
-NOW = datetime(2026, 9, 27, 8, 0, tzinfo=timezone.utc)
+# 11:30 in Ireland (summer time), just after the morning send.
+NOW = datetime(2026, 9, 27, 10, 30, tzinfo=timezone.utc)
 
 
 def _row(**extra) -> dict:
@@ -20,12 +21,33 @@ def _row(**extra) -> dict:
             "created_at": (NOW - timedelta(days=30)).isoformat(), **extra}
 
 
-def test_who_is_due():
+def test_alerts_go_out_at_eleven_in_ireland_once_a_morning():
+    sent_at = lambda when: _row(last_sent_at=when.isoformat())
     assert digest.is_due(_row(), NOW)
-    assert not digest.is_due(_row(last_sent_at=(NOW - timedelta(hours=6)).isoformat()), NOW)
-    assert digest.is_due(_row(last_sent_at=(NOW - timedelta(hours=21)).isoformat()), NOW)
-    weekly = _row(frequency="weekly", last_sent_at=(NOW - timedelta(days=3)).isoformat())
-    assert not digest.is_due(weekly, NOW)
+    # Yesterday's email does not hold back today's, however late it went.
+    assert digest.is_due(sent_at(NOW - timedelta(hours=14)), NOW)
+    # Already sent this morning.
+    assert not digest.is_due(sent_at(NOW - timedelta(minutes=20)), NOW)
+    # Nothing goes before eleven, even with nothing sent for days.
+    assert not digest.is_due(_row(), NOW.replace(hour=9, minute=55))
+    assert not digest.is_due(sent_at(NOW - timedelta(days=3)), NOW.replace(hour=9, minute=55))
+    # Eleven is Irish time in winter too, when Ireland is on UTC.
+    winter = datetime(2026, 12, 7, 11, 5, tzinfo=timezone.utc)
+    assert digest.is_due(_row(), winter)
+    assert not digest.is_due(_row(), winter.replace(hour=10, minute=55))
+
+
+def test_a_weekly_alert_goes_on_the_seventh_morning():
+    weekly = lambda days: _row(frequency="weekly", last_sent_at=(NOW - timedelta(days=days)).isoformat())
+    assert not digest.is_due(weekly(3), NOW)
+    assert not digest.is_due(weekly(6), NOW)
+    assert digest.is_due(weekly(7), NOW)
+
+
+def test_nothing_is_read_before_the_morning_send(monkeypatch):
+    monkeypatch.setattr(service, "configured", lambda: True)
+    monkeypatch.setattr(service, "subscribers", lambda: pytest.fail("read before 11:00"))
+    assert "nothing is due until then" in str(digest.run(now=NOW.replace(hour=9)))
 
 
 def test_new_means_first_seen_since_and_not_an_old_advert_newly_read():
@@ -154,7 +176,7 @@ def test_the_email_carries_one_click_unsubscribe_and_no_em_dashes(monkeypatch):
 
 def test_run_sends_what_is_due_marks_it_and_skips_empty_digests(monkeypatch):
     rows = [_row(user_id="a", graduate=True), _row(user_id="b", internships=True),
-            _row(user_id="c", jobs=True, last_sent_at=(NOW - timedelta(hours=2)).isoformat())]
+            _row(user_id="c", jobs=True, last_sent_at=(NOW - timedelta(minutes=10)).isoformat())]
     sent, marked = [], []
 
     class Server:

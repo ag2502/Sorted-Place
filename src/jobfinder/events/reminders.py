@@ -29,7 +29,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 from sqlalchemy.orm import Session
 
 from jobfinder.alerts import service
-from jobfinder.alerts.digest import DUE_AFTER, _smtp, _time
+from jobfinder.alerts.digest import _smtp, _time
 from jobfinder.core.config import settings
 from jobfinder.events import listing
 from jobfinder.web.links import safe_link
@@ -37,6 +37,8 @@ from jobfinder.web.links import safe_link
 logger = logging.getLogger(__name__)
 
 DAY_BEFORE = timedelta(hours=30)
+# Event reminders keep their own rolling interval; job alerts go out at a fixed hour.
+DUE_AFTER = {"daily": timedelta(hours=20), "weekly": timedelta(days=6, hours=20)}
 SEND_FROM_HOUR, SEND_UNTIL_HOUR = 7, 22
 MAX_EMAILS = 400
 
