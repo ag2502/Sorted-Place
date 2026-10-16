@@ -153,7 +153,8 @@ If you skip this the site still works; the project will just pause when traffic 
 
 ## Step 6c: Turn on email alerts
 
-Alerts are sent from GitHub Actions after each crawl (`crawl.yml`), so their keys are
+Alerts are sent from GitHub Actions by the first crawl after 11:00 Irish time each
+morning (`crawl.yml`), each one covering what opened since the last, so their keys are
 **Actions secrets**, not Vercel variables. The step says what is missing in the run log
 and sends nothing until it is set; it can never fail a crawl.
 
@@ -181,8 +182,9 @@ Gemini or Groq key is needed anywhere. Any `JOBFINDER_GEMINI_API_KEY` or
    | `SMTP_PASSWORD` | the 16-character app password |
    | `SMTP_FROM` | `Sorted Place <that address>` |
 
-5. Run **Actions -> Crawl -> Run workflow**. The "Send email alerts" step's log says how
-   many subscribers were due and how many were sent. To see what would go out without
+5. Run **Actions -> Crawl -> Run workflow** after 11:00 Irish time. The "Send email
+   alerts" step's log says how many subscribers were due and how many were sent (before
+   11:00 it says nothing is due yet). To see what would go out without
    sending, run `jobfinder send-alerts --dry-run` with the same variables set locally.
 
 ---
