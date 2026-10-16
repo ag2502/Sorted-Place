@@ -55,6 +55,7 @@ def load_adapters() -> None:
         personio,
         phenom,
         pinpoint,
+        postingpanda,
         recruitee,
         rezoomo,
         rippling,
