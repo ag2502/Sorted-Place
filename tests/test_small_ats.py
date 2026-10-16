@@ -59,6 +59,20 @@ def test_hirehive_reads_every_page():
 
 
 @respx.mock
+def test_hirehive_passes_on_the_posting_hours():
+    part = _hirehive_item("a", "Healthcare Assistant", "Kildare")
+    part["type"] = {"type": "PartTime", "name": "Part Time"}
+    untyped = _hirehive_item("b", "Driver")
+    respx.get("https://acme.hirehive.com/api/v2/jobs").mock(
+        return_value=httpx.Response(200, json=_hirehive_page([part, untyped], False))
+    )
+
+    jobs = HireHiveAdapter().fetch("acme").jobs
+
+    assert [j.employment_type for j in jobs] == ["Part Time", None]
+
+
+@respx.mock
 def test_breezy_takes_the_description_from_the_position_page():
     respx.get("https://acme.breezy.hr/json").mock(
         return_value=httpx.Response(

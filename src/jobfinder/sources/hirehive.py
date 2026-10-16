@@ -8,7 +8,8 @@ The board API is public and paginated, and each posting carries a free-text `loc
 plus a structured country, so an Irish role is unambiguous even when the city is not.
 
 The API does not name the board's owner, so registration relies on the slug resembling
-the company (see `registry/bulk_detect.py`).
+the company (see `registry/bulk_detect.py`). Each posting's `type` names its hours
+("Part Time", "Full Time"), which is passed on as the employment type.
 """
 
 from __future__ import annotations
@@ -30,6 +31,15 @@ def _location(item: dict) -> str | None:
     if len(parts) == 2 and parts[1].lower() in parts[0].lower():
         parts = parts[:1]
     return ", ".join(parts) or None
+
+
+def _employment_type(item: dict) -> str | None:
+    kind = item.get("type")
+    if isinstance(kind, dict):
+        kind = kind.get("name") or kind.get("type")
+    if not isinstance(kind, str):
+        return None
+    return kind.strip() or None
 
 
 class HireHiveAdapter(BaseAdapter):
@@ -66,6 +76,7 @@ class HireHiveAdapter(BaseAdapter):
                         department=(item.get("category") or {}).get("name")
                         if isinstance(item.get("category"), dict)
                         else item.get("category"),
+                        employment_type=_employment_type(item),
                     )
                 )
 
