@@ -37,6 +37,7 @@ def load_adapters() -> None:
         eightfold,
         geniusats,
         greenhouse,
+        harri,
         healthbox,
         hibob,
         hirehive,
