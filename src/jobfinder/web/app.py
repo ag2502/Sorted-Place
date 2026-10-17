@@ -626,6 +626,7 @@ PLATFORMS = {
     "hibob": ("HiBob", "hibob.com"),
     "wordpress": ("Company careers sites", ""),
     "vacancy_table": ("Company careers sites", ""),
+    "vacancy_headings": ("Company careers sites", ""),
     "geniusats": ("GeniusATS", ""),
     "smoothcareers": ("Smooth Careers", "smooth.ie"),
 }
@@ -636,7 +637,7 @@ PLATFORMS = {
 # sites usually are). These sources are always the employer's own site: generic reads
 # of a careers page, and the adapters built for one employer's site.
 OWN_SITE_ADAPTERS = frozenset({
-    "jsonld", "careers_html", "wordpress", "vacancy_table",
+    "jsonld", "careers_html", "wordpress", "vacancy_table", "vacancy_headings",
     "amazon", "google", "apple", "tiktok", "ibm", "revolut", "hse",
 })
 # Job boards: the posting is theirs, not the employer's or its hiring system's.
