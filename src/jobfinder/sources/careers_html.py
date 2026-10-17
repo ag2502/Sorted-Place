@@ -181,18 +181,32 @@ def _reads_as_role(text: str) -> bool:
     return bool(ROLE_WORDS.search(text)) and 4 <= len(text) <= 150
 
 
+def _names_the_role(link: Link) -> bool:
+    """A link whose own text is a title, not a picture's empty text or "Read More"."""
+    return bool(link.text) and not GENERIC_TEXT.match(link.text)
+
+
 def job_candidates(links: list[Link], page_url: str) -> list[Link]:
     """The links on a page that form a vacancy list, best evidence first."""
     groups: dict[tuple[str, str, str], list[Link]] = defaultdict(list)
-    seen: set[str] = set()
+    seen: dict[str, Link] = {}
     page = page_url.split("#")[0].rstrip("/")
 
     for link in links:
-        if link.url.rstrip("/") == page or link.url in seen:
+        if link.url.rstrip("/") == page:
             continue
         if link.text and NAV_TEXT.search(link.text) and not GENERIC_TEXT.match(link.text):
             continue
-        seen.add(link.url)
+        earlier = seen.get(link.url)
+        if earlier is not None:
+            # A card often links its picture, then its title, then "Read More", all to
+            # the one advert. The title is the one to judge it by.
+            if _names_the_role(link) and not _names_the_role(earlier):
+                group = groups[_group_key(link.url)]
+                group[group.index(earlier)] = link
+                seen[link.url] = link
+            continue
+        seen[link.url] = link
         groups[_group_key(link.url)].append(link)
 
     chosen: list[Link] = []

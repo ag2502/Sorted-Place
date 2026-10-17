@@ -70,6 +70,30 @@ def test_sibling_links_with_role_titles_are_a_vacancy_list():
     ]
 
 
+def test_a_card_linking_its_picture_first_is_judged_by_its_title():
+    """Pat McDonnell Paints links each card's picture, then its title, then "Read More",
+    all to the one advert. Judged by the picture's empty text, no card read as a role."""
+    card = (
+        '<div class="card"><a href="/careers/{slug}/"><img src="/{slug}.jpg"></a>'
+        '<h4><a href="/careers/{slug}/">{title}</a></h4>'
+        '<a href="/careers/{slug}/">Read More</a></div>'
+    )
+    html = "<html><body>" + "".join(
+        card.format(slug=slug, title=title)
+        for slug, title in (
+            ("blanchardstown-sales-assistant-part-time", "SALES ASSISTANT - BLANCHARDSTOWN, DUBLIN 15"),
+            ("limerick-warehouse-operative", "WAREHOUSE OPERATIVE - LIMERICK"),
+            ("cork-sales-manager", "SALES MANAGER - CENTRE PARK ROAD, CORK"),
+        )
+    ) + "</body></html>"
+    links = page_links(html, "https://acme.ie/careers/")
+    assert [link.text for link in job_candidates(links, "https://acme.ie/careers/")] == [
+        "SALES ASSISTANT - BLANCHARDSTOWN, DUBLIN 15",
+        "WAREHOUSE OPERATIVE - LIMERICK",
+        "SALES MANAGER - CENTRE PARK ROAD, CORK",
+    ]
+
+
 def test_a_card_with_a_heading_takes_the_heading_as_its_title():
     """John Paul's cards wrap the location, the title and the department in one link;
     the whole text read as "Dublin, County Dublin, Ireland Accounts Payable Assistant
