@@ -304,6 +304,36 @@ def test_the_list_one_click_past_a_brochure_is_found():
     assert sorted(job.title for job in result.jobs) == ["Finance Officer", "Staff Nurse"]
 
 
+@respx.mock
+def test_a_role_naming_no_place_takes_the_slugs_place_after_its_title_and_advert():
+    """Cash & Carry Kitchens hires in Ireland alone, and two of its seven adverts say only
+    "Midlands" or nothing at all."""
+    _mock_site(
+        _listing(
+            ("/vacancies/fitters-cork", "Kitchen Fitters - Cork"),
+            ("/vacancies/fitters-midlands", "Kitchen Fitters - Midlands"),
+            ("/vacancies/designer", "Kitchen Designer"),
+        ),
+        {
+            "/vacancies/fitters-cork": _advert("Kitchen Fitters - Cork", "Apply with your CV."),
+            "/vacancies/fitters-midlands": _advert("Kitchen Fitters - Midlands", "Apply with your CV."),
+            "/vacancies/designer": _advert("Kitchen Designer", "Based in our Galway showroom."),
+        },
+    )
+
+    placed = CareersHtmlAdapter().fetch("https://acme.ie/careers|place=Ireland")
+    unplaced = CareersHtmlAdapter().fetch("https://acme.ie/careers")
+
+    assert placed.status is CrawlStatus.OK
+    assert {job.title: job.location_raw for job in placed.jobs} == {
+        "Kitchen Fitters - Cork": "Cork, Ireland",
+        "Kitchen Fitters - Midlands": "Ireland",
+        "Kitchen Designer": "Galway, Ireland",
+    }
+    # Without a place the pipeline judges each role from its title and advert, as before.
+    assert {job.location_raw for job in unplaced.jobs} == {None}
+
+
 def _marked_up(title: str) -> str:
     return (
         '<script type="application/ld+json">{"@type":"JobPosting","title":"%s",'

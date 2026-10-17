@@ -49,6 +49,7 @@ from urllib.parse import parse_qsl, urljoin, urlsplit
 import httpx
 from selectolax.parser import HTMLParser, Node
 
+from jobfinder.normalize.location import irish_region_in_advert
 from jobfinder.normalize.text import html_to_text
 from jobfinder.sources.policy import ExcludedSite, is_excluded
 from jobfinder.sources.base import BaseAdapter, PartialJobs, RawJob, register
@@ -58,6 +59,7 @@ from jobfinder.sources.jsonld import (
     _is_job_posting,
     iter_ld_objects,
     parse_job_posting,
+    split_slug,
     title_from_url,
 )
 
@@ -342,11 +344,14 @@ def _location_from(text: str) -> str | None:
     return None
 
 
-def parse_job_page(html: str, url: str, link: Link) -> RawJob | None:
-    """A posting from its own page, or None if the page is not a job."""
+def parse_job_page(html: str, url: str, link: Link, place: str | None = None) -> RawJob | None:
+    """A posting from its own page, or None if the page is not a job.
+
+    `place` is where a role naming nowhere is, as `jsonld`'s is.
+    """
     for obj in iter_ld_objects(html):
         if _is_job_posting(obj):
-            job = parse_job_posting(obj, url)
+            job = parse_job_posting(obj, url, place=place)
             if job:
                 if not job.location_raw:
                     in_title = DUBLIN_NEAR_TOP.search(job.title)
@@ -374,6 +379,11 @@ def parse_job_page(html: str, url: str, link: Link) -> RawJob | None:
     if not location:
         near_top = DUBLIN_NEAR_TOP.search(f"{title}\n{text[:TOP_OF_ADVERT]}")
         location = f"{near_top.group(1)}, Ireland" if near_top else None
+    # An employer hiring in Ireland alone: the title or the advert's "based in" line
+    # gives the county first ("Experienced Kitchen Fitters - Cork").
+    if not location and place:
+        region = irish_region_in_advert(title, text)
+        location = f"{region}, {place}" if region else place
 
     description = html_to_text(body.html) if body is not None else None
     return RawJob(
@@ -390,14 +400,17 @@ class CareersHtmlAdapter(BaseAdapter):
 
     The slug is the page holding the list. Registration stores the page found during the
     trial so a crawl goes straight to it; if the site has since moved the list, the same
-    one-hop search runs again rather than failing.
+    one-hop search runs again rather than failing. `url|place=WHERE` places the roles
+    that name nowhere, set by hand only for an employer hiring in Ireland alone, as
+    `jsonld`'s is: two of Cash & Carry Kitchens' say only "Midlands" or nothing at all.
     """
 
     name = "careers_html"
     tier = 3
 
     def _fetch(self, slug: str, client: httpx.Client) -> list[RawJob]:
-        start = slug if "//" in slug else f"https://{slug}"
+        target, _, _, place = split_slug(slug)
+        start = target if "//" in target else f"https://{target}"
         robots_cache: dict[str, RobotsPolicy] = {}
         listing, candidates, truncated = self.find_listing(start, client, robots_cache)
         if not candidates:
@@ -414,7 +427,7 @@ class CareersHtmlAdapter(BaseAdapter):
             except httpx.HTTPError as exc:
                 logger.debug("careers_html: %s unreachable: %r", link.url, exc)
                 continue
-            job = parse_job_page(response.text, str(response.url), link)
+            job = parse_job_page(response.text, str(response.url), link, place)
             if job:
                 jobs.setdefault(job.source_job_id, job)
             self.polite_pause()
