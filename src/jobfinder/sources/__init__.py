@@ -65,6 +65,7 @@ def load_adapters() -> None:
         talentbrew,
         taleo_tbe,
         teamtailor,
+        vacancy_table,
         workable,
         workday,
         wordpress,

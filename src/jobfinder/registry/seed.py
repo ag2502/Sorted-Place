@@ -54,9 +54,9 @@ def seed_companies(session: Session, path: Path | None = None) -> tuple[int, int
                 "true", "yes", "1",
             }
 
-            # A `jsonld` or `careers_html` source is a careers page read by a generic
-            # extractor, not an ATS, and the coverage report should say so.
-            generic = adapter in ("jsonld", "careers_html")
+            # A `jsonld`, `careers_html` or `vacancy_table` source is a careers page read
+            # by a generic extractor, not an ATS, and the coverage report should say so.
+            generic = adapter in ("jsonld", "careers_html", "vacancy_table")
             state = (
                 CoverageState.GENERIC_EXTRACTION if generic else CoverageState.ATS_DETECTED
             )

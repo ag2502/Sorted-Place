@@ -623,6 +623,7 @@ PLATFORMS = {
     "taleo_tbe": ("Taleo", "oracle.com"),
     "hibob": ("HiBob", "hibob.com"),
     "wordpress": ("Company careers sites", ""),
+    "vacancy_table": ("Company careers sites", ""),
 }
 
 # Where a job's Apply goes, for the row, the job panel and the filter bar's Platform
@@ -631,7 +632,7 @@ PLATFORMS = {
 # sites usually are). These sources are always the employer's own site: generic reads
 # of a careers page, and the adapters built for one employer's site.
 OWN_SITE_ADAPTERS = frozenset({
-    "jsonld", "careers_html", "wordpress",
+    "jsonld", "careers_html", "wordpress", "vacancy_table",
     "amazon", "google", "apple", "tiktok", "ibm", "revolut", "hse",
 })
 # Job boards: the posting is theirs, not the employer's or its hiring system's.
