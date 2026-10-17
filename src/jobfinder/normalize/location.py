@@ -85,7 +85,7 @@ _DUBLIN_LOCALITIES = {
     "knocklyon", "templeogue", "firhouse", "mulhuddart", "clonsilla", "coolock",
     "artane", "ballymount", "stepaside", "sallynoggin", "deansgrange", "goatstown",
     "clonshaugh", "kilmainham", "cruiserath", "ballycoolen", "kilbarrack", "kennelsfort",
-    "ballyogan", "stephens green", "stephen's green", "earlsfort terrace",
+    "ballyogan", "stephens green", "stephen's green", "earlsfort terrace", "fonthill",
     # County Dublin's local authority areas, which public-sector boards give as the
     # location of a council role.
     "fingal", "dún laoghaire-rathdown", "dun laoghaire-rathdown",
@@ -156,7 +156,8 @@ _IRISH_TOWNS = {
              "dunmanway", "drinagh", "ballineen", "bishopstown", "whitegate", "castlelyons",
              "watergrasshill", "frankfield", "moorepark", "douglas", "togher"),
     "Galway": ("oranmore", "ballybrit", "parkmore", "tuam", "ballinasloe", "loughrea",
-               "athenry", "clifden", "portumna", "gort", "knocknacarra", "kilcolgan"),
+               "athenry", "clifden", "portumna", "gort", "knocknacarra", "kilcolgan",
+               "briarhill"),
     "Limerick": ("castletroy", "raheen", "plassey", "annacotty", "newcastle west",
                  "old pallas", "abbeyfeale", "rathkeale", "kilmallock", "newcastlewest",
                  "adare", "aughinish", "bruff", "ballysimon"),

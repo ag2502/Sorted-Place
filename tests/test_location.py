@@ -303,7 +303,8 @@ def test_a_dublin_neighbourhood_named_in_another_country_is_that_country() -> No
      ("Stephens Green", "Dublin"), ("Westport IE", "Mayo"), ("Kerry, Munster", "Kerry"),
      ("Louth, Leinster", "Louth"), ("Shannon, Clare", "Clare"), ("Killarney, Kerry", "Kerry"),
      ("Carrick on Shannon", "Leitrim"), ("Newtownmountkennedy", "Wicklow"),
-     ("The Rower", "Kilkenny"), ("Kingscourt", "Cavan"), ("Collinstown", "Kildare")],
+     ("The Rower", "Kilkenny"), ("Kingscourt", "Cavan"), ("Collinstown", "Kildare"),
+     ("Fonthill", "Dublin"), ("Briarhill", "Galway")],
 )
 def test_places_live_boards_were_losing_are_irish(raw: str, county: str) -> None:
     """Each was a live role filed abroad: a code glued on with a dash, a province, a town
@@ -325,7 +326,7 @@ def test_a_province_named_abroad_is_not(raw: str) -> None:
 @pytest.mark.parametrize(
     "raw,county",
     [("Clare", "Clare"), ("Shannon", "Clare"), ("Kerry, Kerry", "Kerry"), ("Knock", "Mayo"),
-     ("30867 CIRCLE K CASHEL", "Tipperary")],
+     ("30867 CIRCLE K CASHEL", "Tipperary"), ("Bandon", "Cork")],
 )
 def test_an_irish_board_settles_an_ambiguous_name(raw: str, county: str) -> None:
     """Dunnes Stores and TK Maxx Ireland write the county alone."""
