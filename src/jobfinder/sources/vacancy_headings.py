@@ -80,15 +80,10 @@ def _clean(text: str | None) -> str:
     return re.sub(r"\s+", " ", (text or "").replace("\xa0", " ")).strip()
 
 
-def _singular(text: str) -> str:
-    """"Car Drivers/Valetors" as "Car Driver/Valetor", so a plural reads as its role."""
-    return re.sub(r"(\w{3,}?)s\b", r"\1", text)
-
-
 def _is_role(text: str) -> bool:
     if not 4 <= len(text) <= 150:
         return False
-    return _reads_as_role(text) or _reads_as_role(_singular(text)) or bool(HOURS.search(text))
+    return _reads_as_role(text) or bool(HOURS.search(text))
 
 
 def _place(text: str) -> str | None:

@@ -47,7 +47,7 @@ from collections import defaultdict
 from urllib.parse import parse_qsl, urljoin, urlsplit
 
 import httpx
-from selectolax.parser import HTMLParser
+from selectolax.parser import HTMLParser, Node
 
 from jobfinder.normalize.text import html_to_text
 from jobfinder.sources.policy import ExcludedSite, is_excluded
@@ -121,6 +121,13 @@ ROLE_WORDS = re.compile(
 ID_SEGMENT = re.compile(r"\d{3,}|[0-9a-f]{8}-[0-9a-f]{4}", re.I)
 ID_PARAMS = re.compile(r"^(job|jid|jobid|job_id|id|vacancy|vacancyid|req|reqid|posting|p|ref|position|opening)$", re.I)
 
+# The list's name written before each title: "Current Opportunities: Kitchen Designer".
+LIST_NAME = re.compile(
+    r"^(?:current (?:opportunit(?:y|ies)|vacanc(?:y|ies)|openings?|roles?)|vacancy|job opening"
+    r"|now hiring|we(?:'|’)?re hiring)\s*[:–—-]\s+",
+    re.I,
+)
+
 APPLY_SIGNAL = re.compile(r"\bapply\b|\bapplication form\b|\bcloses?\b|\bclosing date\b", re.I)
 PAGINATION = re.compile(r"^(next|›|»|next page|>)$|^\d+$", re.I)
 LOCATION_LABEL = re.compile(
@@ -156,6 +163,19 @@ def _clean(text: str) -> str:
     return re.sub(r"\s+", " ", text.replace("\xa0", " ")).strip()
 
 
+def _card_title(anchor: Node) -> Node | None:
+    """The element a card holds its title in: a heading, or one whose class names it the
+    title, as Cash & Carry Kitchens' `card-generic__title` does."""
+    heading = anchor.css_first("h1, h2, h3, h4, h5, h6")
+    if heading is not None:
+        return heading
+    for node in anchor.css("[class]"):
+        names = (node.attributes.get("class") or "").lower().split()
+        if any(name.endswith("title") and not name.endswith("subtitle") for name in names):
+            return node
+    return None
+
+
 def page_links(html: str, base_url: str) -> list[Link]:
     """Every outbound link with its text and the text of the block around it."""
     tree = HTMLParser(html)
@@ -175,11 +195,12 @@ def page_links(html: str, base_url: str) -> list[Link]:
         # A card that wraps its title in a heading also wraps the location and the
         # department ("Dublin | Accounts Payable Assistant | Finance"); the heading alone
         # is the title.
-        heading = anchor.css_first("h1, h2, h3, h4, h5, h6")
+        heading = _card_title(anchor)
         text = _clean(
             (heading.text(separator=" ") if heading is not None else "")
             or anchor.text(separator=" ") or anchor.attributes.get("title") or ""
         )
+        text = LIST_NAME.sub("", text) or text
         parent = anchor.parent
         card = _clean(parent.text(separator=" | ")) if parent is not None else text
         boxes: list[int] = []
@@ -209,8 +230,16 @@ def _addresses_one_posting(url: str) -> bool:
     return any(ID_PARAMS.match(k) and v for k, v in parse_qsl(parts.query))
 
 
+def _singular(text: str) -> str:
+    """"Experienced Kitchen Fitters" as "Experienced Kitchen Fitter", so a plural reads as
+    its role."""
+    return re.sub(r"(\w{3,}?)s\b", r"\1", text)
+
+
 def _reads_as_role(text: str) -> bool:
-    return bool(ROLE_WORDS.search(text)) and 4 <= len(text) <= 150
+    if not 4 <= len(text) <= 150:
+        return False
+    return bool(ROLE_WORDS.search(text) or ROLE_WORDS.search(_singular(text)))
 
 
 def _names_the_role(link: Link) -> bool:

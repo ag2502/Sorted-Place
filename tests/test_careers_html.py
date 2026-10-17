@@ -114,6 +114,31 @@ def test_a_card_with_a_heading_takes_the_heading_as_its_title():
     ]
 
 
+def test_a_card_title_named_by_its_class_is_the_title_and_plurals_read_as_roles():
+    """Cash & Carry Kitchens' cards hold a label, the list's name, the title and "Read
+    more" in one link, with the title in a `card-generic__title` paragraph; most of its
+    titles are plural ("Experienced Kitchen Fitters")."""
+    card = (
+        '<article><a href="/careers/{slug}" class="card-generic">'
+        '<span class="card-generic__label">Careers</span>'
+        '<p class="card-generic__subtitle">Showrooms</p>'
+        '<p class="card-generic__title">Current Opportunities: {title}</p>'
+        '<span class="button">Read more</span></a></article>'
+    )
+    html = "<html><body>" + "".join(
+        card.format(slug=slug, title=title)
+        for slug, title in (("kitchen-designers", "Kitchen Designer Positions"),
+                            ("fitters-cork", "Experienced Kitchen Fitters - Cork"),
+                            ("fitters-galway", "Experienced Kitchen Fitters - Galway"))
+    ) + "</body></html>"
+    links = page_links(html, "https://acme.ie/careers")
+    assert [link.text for link in job_candidates(links, "https://acme.ie/careers")] == [
+        "Kitchen Designer Positions",
+        "Experienced Kitchen Fitters - Cork",
+        "Experienced Kitchen Fitters - Galway",
+    ]
+
+
 def test_a_careers_menu_is_not_a_vacancy_list():
     """Siblings under /careers/ with descriptive slugs - the shape of every brochure."""
     links = page_links(
