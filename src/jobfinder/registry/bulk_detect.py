@@ -87,8 +87,8 @@ SLUG_VALIDATORS = {
     **{
         name: _verify_by_fetch(name)
         for name in (
-            "ashby", "bamboohr", "breezy", "candidatemanager", "eightfold", "hirehive", "icims",
-            "occupop", "workable",
+            "ashby", "bamboohr", "breezy", "candidatemanager", "eightfold", "hirehive", "hireroad",
+            "icims", "occupop", "workable",
             "oleeo", "oracle_recruiting", "pinpoint", "successfactors", "teamtailor",
         )
     },

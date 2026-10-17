@@ -40,6 +40,7 @@ def load_adapters() -> None:
         healthbox,
         hibob,
         hirehive,
+        hireroad,
         hrcloud,
         hrdepartment,
         hrmanager,

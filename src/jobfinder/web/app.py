@@ -600,6 +600,7 @@ PLATFORMS = {
     "candidatemanager": ("CandidateManager", "candidatemanager.net"),
     "bamboohr": ("BambooHR", "bamboohr.com"),
     "hirehive": ("HireHive", "hirehive.com"),
+    "hireroad": ("HireRoad", "hireroad.com"),
     "lever": ("Lever", "lever.co"),
     "teamtailor": ("Teamtailor", "teamtailor.com"),
     "personio": ("Personio", "personio.com"),

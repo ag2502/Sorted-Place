@@ -104,6 +104,9 @@ ATS_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("keyhire", re.compile(LABEL_START + r"([a-z0-9_-]+)\.keyhire\.ie", re.I)),
     ("peoplefirst", re.compile(LABEL_START + r"([a-z0-9_-]+)\.jobs\.people-first\.com", re.I)),
     ("reach_ats", re.compile(LABEL_START + r"([a-z0-9_-]+)\.reach-ats\.com", re.I)),
+    # A HireRoad careers page, `app.hireroadrecruit.com/careers/regatta/group`, is framed
+    # into the employer's own site.
+    ("hireroad", re.compile(r"app\.hireroadrecruit\.com/careers/([a-z0-9_-]+)", re.I)),
 ]
 
 # Workday: tenant.wdNN.myworkdayjobs.com/<locale>/<Site> - the site segment is the last
