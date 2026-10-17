@@ -818,6 +818,29 @@ def test_a_vendor_cdn_host_is_not_taken_for_a_customer_board():
     assert detect_in_text(markup) == ("hirehive", "nuritas")
 
 
+TEAMTAILOR_SITE = (
+    '<link rel="stylesheet" href="https://assets-aws.teamtailor-cdn.com/assets/careersite-5aafe9cf.css">'
+    '<a href="https://careers.acme.ie/jobs/8552306-team-member">Team Member</a>'
+    '<a href="https://www.teamtailor.com/?utm_campaign=poweredby">Powered by Teamtailor</a>'
+)
+
+
+@respx.mock
+def test_a_teamtailor_site_on_the_employers_domain_is_read_by_its_host():
+    """careers.staycitygroup.com redirects to Teamtailor's site at careers.staycity.com."""
+    from jobfinder.registry.detect import detect_from_url
+
+    respx.get("https://careers.acmegroup.com/").mock(return_value=httpx.Response(
+        301, headers={"Location": "https://careers.acme.ie/"}))
+    respx.get("https://careers.acme.ie/").mock(return_value=httpx.Response(200, text=TEAMTAILOR_SITE))
+
+    found = detect_from_url("https://careers.acmegroup.com/")
+
+    assert (found.adapter, found.slug) == ("teamtailor", "careers.acme.ie")
+    # The footer's link to Teamtailor itself names no board.
+    assert detect_in_text(TEAMTAILOR_SITE) is None
+
+
 def test_the_generic_blocklist_still_applies_to_single_slug_boards():
     assert detect_in_text('<a href="https://boards.greenhouse.io/careers">x</a>') is None
 

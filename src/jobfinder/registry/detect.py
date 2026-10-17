@@ -340,6 +340,26 @@ def detect_in_text(text: str) -> tuple[str, str] | None:
     return None
 
 
+# Career sites a platform serves on the employer's own domain. The page names the
+# platform only through its assets, never through a board host, so the site's own host
+# is the slug. Staycity's board is Teamtailor's at `careers.staycity.com`, and nothing on
+# it links to `teamtailor.com` except a "powered by" footer.
+HOSTED_SITES: list[tuple[str, re.Pattern[str]]] = [
+    ("teamtailor", re.compile(r"teamtailor-cdn\.com/assets/careersite", re.I)),
+]
+
+
+def detect_hosted_site(url: str, text: str) -> tuple[str, str] | None:
+    """A platform's career site served on the employer's host, found by its assets."""
+    host = urlsplit(url).netloc.lower().split(":")[0]
+    if not host:
+        return None
+    for adapter, pattern in HOSTED_SITES:
+        if pattern.search(text):
+            return adapter, host
+    return None
+
+
 def careers_links(html: str, base_url: str) -> list[str]:
     """Careers-page URLs linked from a page, most promising first.
 
@@ -412,6 +432,13 @@ def detect_from_url(url: str, client: httpx.Client | None = None) -> Detection:
         return Detection(
             adapter=hit[0], slug=hit[1], careers_url=final_url, confidence="high",
             note="embedded in page",
+        )
+
+    hit = detect_hosted_site(final_url, response.text)
+    if hit:
+        return Detection(
+            adapter=hit[0], slug=hit[1], careers_url=final_url, confidence="high",
+            note="career site on the employer's domain",
         )
 
     return Detection(careers_url=final_url, note="no ATS fingerprint found")
@@ -797,6 +824,16 @@ def _detect_and_body(url: str, client: httpx.Client) -> tuple[Detection, str]:
             Detection(
                 adapter=hit[0], slug=hit[1], careers_url=final_url,
                 confidence="high", note="embedded in page",
+            ),
+            response.text,
+        )
+
+    hit = detect_hosted_site(final_url, response.text)
+    if hit:
+        return (
+            Detection(
+                adapter=hit[0], slug=hit[1], careers_url=final_url,
+                confidence="high", note="career site on the employer's domain",
             ),
             response.text,
         )
