@@ -12,10 +12,17 @@ usually built by script. The slug is ``host|rest_base``, e.g.
 ``musgravegroup.com|vacancy``.
 
 Location is the awkward part: there is no standard field. WP Job Manager keeps it in
-`meta._job_location`; custom types usually state it in the advert ("Location: Centra
-Carrickfergus"). Both are tried, then the title's last part, which is where Boots
-writes it ("Seasonal Customer Assistant – Cork, Mahon Point"), and a site with a fixed
-location may name it as a third slug part (``host|rest_base|Dublin, Ireland``).
+`meta._job_location`; other sites file it as a term on the post, or state it in the
+advert ("Location: Centra Carrickfergus"). Those are tried in that order, then the
+title's last part, which is where Boots writes it ("Seasonal Customer Assistant – Cork,
+Mahon Point"), and a site with a fixed location may name it as a third slug part
+(``host|rest_base|Dublin, Ireland``).
+
+Terms come from the post's `class_list`: WP Job Openings files a vacancy under
+`job-location-templeogue` and `job-type-part-time`, other themes under
+`career-location-cork`. The type terms are the hours. A term is a bare town, and
+"Monkstown" is in Antrim as well as Dublin, so where the slug names a place its country
+is added to the town.
 
 A board for several countries can add ``ireland-only`` as a slug part: boots.jobs lists
 about 2,900 roles across the UK and Ireland, and only the Irish ones are kept.
@@ -47,6 +54,9 @@ IRELAND_ONLY = "ireland-only"
 _REFERENCE = re.compile(r"^\d{4,}[A-Z]{0,3}\s*:\s*")
 # The last part of "Role – Town, Store" or "Role - Town".
 _TITLE_PLACE = re.compile(r"\s[–-]\s([^–]+)$")
+# A post's location and hours terms in `class_list`: "job-location-bray", "job-type-part-time".
+_TERM_PLACE = re.compile(r"^(?:[a-z]+[-_])?locations?[-_]([a-z0-9-]+)$")
+_TERM_HOURS = re.compile(r"^(?:job|employment|contract)[-_]types?[-_]([a-z0-9-]+)$")
 
 
 def split_slug(slug: str) -> tuple[str, str, str | None, bool]:
@@ -67,11 +77,33 @@ def _title_place(title: str) -> str | None:
     return candidate if normalize_location(candidate).is_ireland else None
 
 
+def _terms(item: dict, pattern: re.Pattern[str]) -> list[str]:
+    classes = item.get("class_list") or []
+    if isinstance(classes, dict):
+        classes = list(classes.values())
+    found: list[str] = []
+    for entry in classes:
+        match = pattern.match(entry) if isinstance(entry, str) else None
+        if match:
+            term = match.group(1).replace("-", " ").title()
+            if term not in found:
+                found.append(term)
+    return found
+
+
+def _term_place(item: dict, place: str | None) -> str | None:
+    towns = _terms(item, _TERM_PLACE)
+    if not towns:
+        return None
+    country = place.rsplit(",", 1)[-1].strip() if place else ""
+    return f"{towns[0]}, {country}" if country else towns[0]
+
+
 def _text(fragment: str) -> str:
     return re.sub(r"\s+", " ", html.unescape(_TAGS.sub(" ", fragment or ""))).strip()
 
 
-def _location(item: dict) -> str | None:
+def _field_location(item: dict) -> str | None:
     for fields in (item.get("meta"), item.get("acf")):
         if not isinstance(fields, dict):
             continue
@@ -79,6 +111,10 @@ def _location(item: dict) -> str | None:
             value = fields.get(key)
             if isinstance(value, str) and value.strip():
                 return value.strip()
+    return None
+
+
+def _advert_location(item: dict) -> str | None:
     content = html.unescape(_TAGS.sub("\n", (item.get("content") or {}).get("rendered") or ""))
     match = _LOCATION.search(content)
     if not match:
@@ -136,7 +172,10 @@ class WordPressAdapter(BaseAdapter):
             title = _REFERENCE.sub("", _text((item.get("title") or {}).get("rendered")))
             if not title:
                 continue
-            location = _location(item) or _title_place(title) or place
+            # A term is filed by the employer; the advert's "Location" is read from prose,
+            # where "due to the location, a car is required" reads as a place.
+            location = (_field_location(item) or _term_place(item, place) or _advert_location(item)
+                        or _title_place(title) or place)
             if irish_only and not normalize_location(location).is_ireland:
                 continue
             jobs.append(RawJob(
@@ -146,6 +185,7 @@ class WordPressAdapter(BaseAdapter):
                 location_raw=location,
                 description=(item.get("content") or {}).get("rendered") or None,
                 posted_at=_parse_date(item.get("date_gmt") or item.get("date")),
+                employment_type=", ".join(_terms(item, _TERM_HOURS)) or None,
             ))
         return jobs
 

@@ -1314,6 +1314,40 @@ def test_wordpress_reads_a_vacancy_post_type_and_its_stated_location():
 
 
 @respx.mock
+def test_wordpress_reads_the_town_and_hours_from_a_posts_terms():
+    """WP Job Openings files each vacancy under its shop's town and its hours."""
+    from jobfinder.normalize.hours import is_part_time
+    from jobfinder.normalize.location import normalize_location
+    from jobfinder.sources.wordpress import WordPressAdapter
+
+    posts = [
+        {"id": 1692, "link": "https://acme.ie/jobs/sales-assistant-monkstown/", "title": {"rendered": "Sales Assistant Monkstown"},
+         "content": {"rendered": "<p>Join our shop team.</p>"},
+         "class_list": ["post-1692", "type-awsm_job_openings", "job-type-full-time", "job-type-part-time", "job-location-monkstown"]},
+        {"id": 1701, "link": "https://acme.ie/jobs/chef/", "title": {"rendered": "Chef"}, "content": {"rendered": "<p>Kitchen.</p>"},
+         "class_list": ["post-1701", "type-awsm_job_openings", "job-type-full-time"]},
+        {"id": 1702, "link": "https://acme.ie/jobs/animal-carer/", "title": {"rendered": "Animal Carer"},
+         "content": {"rendered": "<p>Due to the location, a car is required to attend the centre.</p>"},
+         "class_list": ["post-1702", "type-career", "career-location-cork", "job-type-full-time"]},
+    ]
+    respx.get("https://acme.ie/wp-json/wp/v2/awsm_job_openings").mock(
+        return_value=httpx.Response(200, json=posts, headers={"X-WP-Total": "2", "X-WP-TotalPages": "1"})
+    )
+
+    shop, chef, carer = WordPressAdapter().fetch("acme.ie|awsm_job_openings|Bray, Ireland").jobs
+
+    # The bare town takes the slug's country: Monkstown is in Antrim as well as Dublin.
+    assert shop.location_raw == "Monkstown, Ireland"
+    assert normalize_location(shop.location_raw).is_ireland
+    assert shop.employment_type == "Full Time, Part Time"
+    assert is_part_time(shop.title, None, shop.employment_type)
+    # A post with no location term keeps the slug's place.
+    assert (chef.location_raw, chef.employment_type) == ("Bray, Ireland", "Full Time")
+    # The filed term wins over prose that only mentions "the location".
+    assert carer.location_raw == "Cork, Ireland"
+
+
+@respx.mock
 def test_wordpress_short_read_fails():
     from jobfinder.sources.wordpress import WordPressAdapter
 
