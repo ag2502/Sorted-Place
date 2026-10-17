@@ -880,3 +880,11 @@ L'Occitane,pinpoint,loccitane,4,false,chain-sweep,"Board for its stores in Irela
 Patagonia,hirehive,patagonia,4,false,chain-sweep,"Board for its European stores; nothing in Ireland open on 16 Oct 2026, checked in turn",https://www.patagonia.com/jobs-at-patagonia/
 Fiskars Group,workday,fiskars:wd3:FiskarsGroup,4,true,chain-sweep,"Owns Waterford Crystal; nothing in Ireland open on 16 Oct 2026, checked in turn",https://fiskarsgroup.com/careers/
 Dogs Trust Ireland,pinpoint,dogstrust,4,false,chain-sweep,"Board shared with Dogs Trust in the UK; nothing in Ireland open on 16 Oct 2026, checked in turn",https://www.dogstrust.ie/support-us/join-us
+Staycity,teamtailor,careers.staycitygroup.com,3,false,chain-sweep,Group board for its aparthotels in Ireland and Europe; the Irish properties' roles are kept; 10 open on 17 Oct 2026,https://careers.staycitygroup.com/jobs
+Sprout & Co,teamtailor,careers.sproutfoodco.com,3,false,chain-sweep,Café roles on its own Teamtailor career site; 17 open on 17 Oct 2026,https://careers.sproutfoodco.com/jobs
+The Works,teamtailor,www.theworks.jobs,3,false,chain-sweep,Board for its UK and Irish stores; the Irish stores' roles are kept; 6 open on 17 Oct 2026,https://www.theworks.jobs/jobs
+Space NK,teamtailor,careers.spacenk.com,3,false,chain-sweep,Global board; the Dublin stores' roles are kept; 2 open on 17 Oct 2026,https://careers.spacenk.com/jobs
+Butler's Pantry,wordpress,"thebutlerspantry.ie|awsm_job_openings|Bray, Ireland",3,false,chain-sweep,"WP Job Openings vacancies read through the WordPress REST API, each placed by its shop's term, else at the Bray kitchen; 12 open on 17 Oct 2026",https://thebutlerspantry.ie/careers/
+ISPCA,wordpress,"nspca.ie|career|Dublin, Ireland",3,false,chain-sweep,"Now the National SPCA, joined by the DSPCA, at nspca.ie, where ispca.ie redirects; career posts read through the WordPress REST API; 6 open on 17 Oct 2026",https://nspca.ie/careers/
+Top Oil,careers_html,https://www.top.ie/about-us/vacancies,3,false,chain-sweep,"Vacancies page on its own site, while its Rezoomo page is empty; 3 open on 17 Oct 2026",https://www.top.ie/about-us/vacancies
+iNUA Collection,jsonld,https://careers.inua.ie/,3,false,chain-sweep,Hotel roles with JobPosting markup on the group's careers site; 31 open on 17 Oct 2026,https://careers.inua.ie/
