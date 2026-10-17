@@ -35,6 +35,7 @@ def load_adapters() -> None:
         cornerstone,
         dayforce,
         eightfold,
+        geniusats,
         greenhouse,
         healthbox,
         hibob,

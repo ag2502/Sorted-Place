@@ -353,6 +353,8 @@ def detect_in_text(text: str) -> tuple[str, str] | None:
 # it links to `teamtailor.com` except a "powered by" footer.
 HOSTED_SITES: list[tuple[str, re.Pattern[str]]] = [
     ("teamtailor", re.compile(r"teamtailor-cdn\.com/assets/careersite", re.I)),
+    # Caffè Nero's `careers.caffenero.com` loads its styles and scripts from GeniusATS.
+    ("geniusats", re.compile(r"cdn\.ats\.careers/(?:geniusats|gats-static)/", re.I)),
 ]
 
 

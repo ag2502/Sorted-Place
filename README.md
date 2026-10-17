@@ -85,6 +85,7 @@ the employer.
 | 1 | `taleo_tbe` | Taleo Business Edition career sections, following their scroll pages |
 | 1 | `wordpress` | A WordPress site's vacancy post type, through the REST API |
 | 1 | `hibob` | HiBob hosted careers sites |
+| 1 | `geniusats` | GeniusATS career sites; the search form posted once, the whole list in its answer |
 | 1b | `amazon` | Bespoke platform; `country=IRL` |
 | 1b | `google` | No API, but the careers page is server-rendered |
 | 1b | `apple` | Search page carries its results as hydration data; `ireland-IRL` |
