@@ -1857,13 +1857,13 @@ def test_dayforce_reads_the_search_with_its_csrf_token(monkeypatch):
         return_value=httpx.Response(200, json={"csrfToken": "tok"})
     )
 
-    def posting(i, *places):
-        return {"jobPostingId": i, "jobTitle": f"Administrator {i}", "jobDescription": "<p>Run tests.</p>",
+    def posting(i, *places, title=None):
+        return {"jobPostingId": i, "jobTitle": title or f"Administrator {i}", "jobDescription": "<p>Run tests.</p>",
                 "postingStartTimestampUTC": "2026-09-15T23:00:00+00:00",
                 "postingLocations": [{"formattedAddress": p} for p in places]}
 
     pages = {0: [posting(1, "Dundalk, Co. Louth, Ireland"), posting(2, "Arlington, TX, USA", "Galway, Ireland")],
-             2: [posting(3, "Vancouver, BC, Canada")]}
+             2: [posting(3, "Vancouver, BC, Canada", title=" Hotel Manager")]}
 
     def search(request):
         body = jsonlib.loads(request.content)
@@ -1881,6 +1881,7 @@ def test_dayforce_reads_the_search_with_its_csrf_token(monkeypatch):
         ("3", "Vancouver, BC, Canada", []),
     ]
     assert "Run tests" in result.jobs[0].description and result.jobs[0].posted_at.day == 15
+    assert result.jobs[2].title == "Hotel Manager"
 
 
 def test_dayforce_is_detected_with_its_board():

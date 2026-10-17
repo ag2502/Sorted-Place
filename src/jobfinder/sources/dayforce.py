@@ -98,7 +98,8 @@ class DayforceAdapter(BaseAdapter):
                     posted = None
             jobs.append(RawJob(
                 source_job_id=posting_id,
-                title=item.get("jobTitle") or "",
+                # Whitbread's titles can start with a space (" Hotel Manager").
+                title=(item.get("jobTitle") or "").strip(),
                 url=f"{HOST}/{CULTURE}/{namespace}/{board}/jobs/{posting_id}",
                 location_raw=places[0],
                 extra_locations=places[1:],
