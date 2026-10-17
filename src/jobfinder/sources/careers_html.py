@@ -19,6 +19,14 @@ Most careers pages are brochures, and the list is one click further on, behind "
 vacancies" or "View open roles". The careers page is read first; if it holds no list,
 the links that say where the list is are followed, one hop only.
 
+Some sites give every page one path. DID Electrical's adverts are Shopify pages,
+`/pages/temporary-sales-advisor-16`, the same shape as its delivery and price-match
+pages, so judged together they read as a menu. Its nineteen adverts sit in one list of
+their own, though. When neither the careers page nor a hop holds a list, a group of
+siblings is split by the element its links sit in, and each part is judged on its own.
+That runs last, so a brochure's list of role families never wins over the real list
+one click away.
+
 ## Why every candidate is opened before it counts
 
 Link shape alone produces false positives that look entirely plausible — The Irish
@@ -127,15 +135,21 @@ TOP_OF_ADVERT = 1500
 
 SKIP_EXTENSIONS = (".pdf", ".doc", ".docx", ".jpg", ".png", ".zip")
 MIN_GROUP = 2
+# How far out a list is looked for around its links: a list item or a card, and a
+# heading inside it, usually stand between a link and the list holding it.
+CONTAINER_DEPTH = 3
 
 
 class Link:
-    __slots__ = ("url", "text", "card")
+    __slots__ = ("url", "text", "card", "boxes")
 
-    def __init__(self, url: str, text: str, card: str) -> None:
+    def __init__(self, url: str, text: str, card: str, boxes: tuple[int, ...] = ()) -> None:
         self.url = url
         self.text = text
         self.card = card
+        # The elements around the link, nearest first: links sharing one sit in the
+        # same list.
+        self.boxes = boxes
 
 
 def _clean(text: str) -> str:
@@ -168,7 +182,12 @@ def page_links(html: str, base_url: str) -> list[Link]:
         )
         parent = anchor.parent
         card = _clean(parent.text(separator=" | ")) if parent is not None else text
-        links.append(Link(url, text, card[:400]))
+        boxes: list[int] = []
+        node = parent
+        while node is not None and len(boxes) < CONTAINER_DEPTH:
+            boxes.append(node.mem_id)
+            node = node.parent
+        links.append(Link(url, text, card[:400], tuple(boxes)))
     return links
 
 
@@ -199,8 +218,37 @@ def _names_the_role(link: Link) -> bool:
     return bool(link.text) and not GENERIC_TEXT.match(link.text)
 
 
-def job_candidates(links: list[Link], page_url: str) -> list[Link]:
-    """The links on a page that form a vacancy list, best evidence first."""
+def _qualifies(members: list[Link]) -> bool:
+    if len(members) < MIN_GROUP:
+        return False
+    addressed = sum(_addresses_one_posting(m.url) for m in members)
+    roles = sum(_reads_as_role(m.text) for m in members)
+    # A group earns its place with titles that read as roles, or with a posting id in
+    # every URL. A slug alone proves nothing: `/careers/making-applications` is as
+    # descriptive as `/careers/staff-nurse`, and advice pages come in groups too.
+    return roles * 2 >= len(members) or addressed == len(members)
+
+
+def _listed_together(members: list[Link]) -> list[Link]:
+    """The links of a group that qualify as a list of their own, split by the element
+    they sit in: the nearest first, then the ones around it."""
+    for depth in range(CONTAINER_DEPTH):
+        boxes: dict[int, list[Link]] = defaultdict(list)
+        for member in members:
+            if len(member.boxes) > depth:
+                boxes[member.boxes[depth]].append(member)
+        found = [link for box in boxes.values() if _qualifies(box) for link in box]
+        if found:
+            return found
+    return []
+
+
+def job_candidates(links: list[Link], page_url: str, *, by_container: bool = False) -> list[Link]:
+    """The links on a page that form a vacancy list, best evidence first.
+
+    `by_container` also splits a group that fails as a whole by the element its links
+    sit in, for a site whose adverts share their path's shape with its other pages.
+    """
     groups: dict[tuple[str, str, str], list[Link]] = defaultdict(list)
     seen: dict[str, Link] = {}
     page = page_url.split("#")[0].rstrip("/")
@@ -224,15 +272,10 @@ def job_candidates(links: list[Link], page_url: str) -> list[Link]:
 
     chosen: list[Link] = []
     for members in groups.values():
-        if len(members) < MIN_GROUP:
-            continue
-        addressed = sum(_addresses_one_posting(m.url) for m in members)
-        roles = sum(_reads_as_role(m.text) for m in members)
-        # A group earns its place with titles that read as roles, or with a posting id
-        # in every URL. A slug alone proves nothing: `/careers/making-applications` is
-        # as descriptive as `/careers/staff-nurse`, and advice pages come in groups too.
-        if roles * 2 >= len(members) or addressed == len(members):
+        if _qualifies(members):
             chosen.extend(members)
+        elif by_container:
+            chosen.extend(_listed_together(members))
     return chosen
 
 
@@ -375,6 +418,7 @@ class CareersHtmlAdapter(BaseAdapter):
         if found:
             return page_url, found, _has_pagination(links)
 
+        read = [(page_url, links)]
         for hop in [url for url in listing_links(links) if not is_excluded(url)][:MAX_LISTING_HOPS]:
             hop_robots = _robots(hop, client, cache)
             if not hop_robots.allows(hop):
@@ -389,8 +433,15 @@ class CareersHtmlAdapter(BaseAdapter):
             found = job_candidates(hop_links, hop_url)
             if found:
                 return hop_url, found, _has_pagination(hop_links)
+            read.append((hop_url, hop_links))
             self.polite_pause()
 
+        # No list by the shape of its links anywhere: then a list that sits in a
+        # container of its own, on the pages already read.
+        for url, page in read:
+            found = job_candidates(page, url, by_container=True)
+            if found:
+                return url, found, _has_pagination(page)
         return page_url, [], False
 
 def _robots(url: str, client: httpx.Client, cache: dict[str, RobotsPolicy]) -> RobotsPolicy:

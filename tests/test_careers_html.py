@@ -147,6 +147,53 @@ def test_a_real_title_starting_with_a_navigation_word_is_kept():
     assert len(job_candidates(links, "https://acme.ie/careers")) == 2
 
 
+def _shop_page(*roles: tuple[str, str], extra: str = "") -> str:
+    """Shaped like DID Electrical's careers page on 17 Oct 2026: its adverts are Shopify
+    pages, listed together among links to the shop's other pages."""
+    shop = "".join(
+        f'<div class="promo"><a href="/pages/{slug}">{text}</a></div>'
+        for slug, text in (
+            ("tv-installations", "TV Installations"), ("store-locator", "Find a Store"),
+            ("delivery", "Delivery Information"), ("price-match", "Price Match Promise"),
+            ("gift-cards", "Gift Cards"),
+        )
+    )
+    cards = "".join(
+        f'<a href="/pages/{slug}" target="_blank"><li class="smoothie-job-listing-card">'
+        f"<h3>{title}</h3><span>North Dublin</span></li></a>"
+        for slug, title in roles
+    )
+    return f"<html><body>{shop}<ul id='smoothie-search-list'>{cards}</ul>{extra}</body></html>"
+
+
+DID_ROLES = (
+    ("appliance-installer-10", "Appliance Installer"),
+    ("temporary-sales-advisor-16", "Temporary Sales Advisor"),
+    ("temporary-sales-part-time", "Cork - Temporary Sales (Part-Time)"),
+)
+
+
+def test_adverts_sharing_their_path_with_the_shops_pages_are_a_list_of_their_own():
+    links = page_links(_shop_page(*DID_ROLES), "https://acme.ie/pages/careers")
+    # As one group of `/pages/` siblings, the shop's pages outvote the adverts.
+    assert job_candidates(links, "https://acme.ie/pages/careers") == []
+    found = job_candidates(links, "https://acme.ie/pages/careers", by_container=True)
+    # The list is judged whole, so an advert whose title names no role is kept with it.
+    assert [link.text for link in found] == [title for _, title in DID_ROLES]
+
+
+def test_a_list_of_shop_pages_is_not_a_vacancy_list_in_any_container():
+    links = page_links(
+        _listing(
+            ("/pages/delivery", "Delivery Information"),
+            ("/pages/price-match", "Price Match Promise"),
+            ("/pages/gift-cards", "Gift Cards"),
+        ),
+        "https://acme.ie/pages/careers",
+    )
+    assert job_candidates(links, "https://acme.ie/pages/careers", by_container=True) == []
+
+
 # ---------------------------------------------------------------------------
 # Confirming a page is a job
 # ---------------------------------------------------------------------------
@@ -229,6 +276,50 @@ def test_the_list_one_click_past_a_brochure_is_found():
     result = CareersHtmlAdapter().fetch("https://acme.ie/careers")
 
     assert result.status is CrawlStatus.OK
+    assert sorted(job.title for job in result.jobs) == ["Finance Officer", "Staff Nurse"]
+
+
+def _marked_up(title: str) -> str:
+    return (
+        '<script type="application/ld+json">{"@type":"JobPosting","title":"%s",'
+        '"jobLocation":{"@type":"Place","address":"North Dublin"},'
+        '"employmentType":"PART_TIME"}</script>' % title
+    )
+
+
+@respx.mock
+def test_adverts_in_a_list_of_their_own_are_read_when_no_other_list_is_found():
+    _mock_site(
+        _shop_page(*DID_ROLES),
+        {f"/pages/{slug}": _marked_up(title) for slug, title in DID_ROLES},
+    )
+
+    result = CareersHtmlAdapter().fetch("https://acme.ie/careers")
+
+    assert result.status is CrawlStatus.OK
+    assert sorted(job.title for job in result.jobs) == sorted(title for _, title in DID_ROLES)
+    assert {job.location_raw for job in result.jobs} == {"North Dublin"}
+
+
+@respx.mock
+def test_the_list_one_click_away_wins_over_role_families_listed_on_the_brochure():
+    """A container is only looked in once no page read has a list by its links' shape."""
+    _mock_site(
+        _shop_page(
+            ("store-manager", "Store Manager"), ("sales-advisor", "Sales Advisor"),
+            extra="<a href='/current-vacancies'>Current vacancies</a>",
+        ),
+        {
+            "/current-vacancies": _listing(
+                ("/vacancies/1", "Staff Nurse"), ("/vacancies/2", "Finance Officer")
+            ),
+            "/vacancies/1": _advert("Staff Nurse"),
+            "/vacancies/2": _advert("Finance Officer"),
+        },
+    )
+
+    result = CareersHtmlAdapter().fetch("https://acme.ie/careers")
+
     assert sorted(job.title for job in result.jobs) == ["Finance Officer", "Staff Nurse"]
 
 
