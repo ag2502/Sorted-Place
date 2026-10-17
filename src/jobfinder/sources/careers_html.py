@@ -92,7 +92,20 @@ ROLE_WORDS = re.compile(
     r"|lecturer|professor|head of|supervisor|operative|driver|chef|intern|graduate"
     r"|representative|agent|controller|auditor|solicitor|lawyer|paralegal|therapist"
     r"|pharmacist|doctor|registrar|porter|attendant|planner|surveyor|inspector|trainee"
-    r"|apprentice|president|worker|tester|recruiter)\b",
+    r"|apprentice|president|worker|tester|recruiter"
+    # The shop floor, the bar, the kitchen and the gym. Without these Clarks' "Sales Team
+    # Member" adverts read as no role at all, and `lead` stops short of every "Shift
+    # Leader". "Staff" and "member" count only after the place or team they belong to:
+    # "Staff Wellbeing" and "Become a Member" are pages, not roles.
+    r"|leader|barista|cashier|bartender|waiter|waitress|hostess|cook|baker|butcher"
+    r"|cleaner|housekeeper|receptionist|concierge|steward|stylist|hairdresser|barber"
+    r"|beautician|optician|optometrist|picker|packer|installer|mechanic|fitter|operator"
+    r"|courier|guard|lifeguard|carer|teacher|tutor|instructor|trainer|educator"
+    r"|practitioner|merchandiser"
+    r"|(?:team|crew|staff|store|shop|sales|retail) member"
+    r"|(?:bar|floor|kitchen|catering|retail|shop|deli|counter|cafe|café|restaurant|hotel"
+    r"|pub|seasonal|christmas|temporary|part[- ]time|events?|cleaning|care|support|waiting"
+    r"|house|housekeeping) staff)\b",
     re.I,
 )
 

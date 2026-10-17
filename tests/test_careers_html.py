@@ -160,6 +160,22 @@ def test_an_advert_is_read_with_its_labelled_location():
     assert job.location_raw == "Dublin 2"
 
 
+@pytest.mark.parametrize(
+    "title", ["Full Price - IRL Sales Team Member", "Bar Staff", "Shift Leader", "Barista", "Cashier"]
+)
+def test_shop_floor_bar_and_kitchen_roles_are_roles(title: str):
+    """Clarks' "Sales Team Member" adverts were dropped as naming no role, and every
+    "Shift Leader" with them: `lead` stops short of "leader"."""
+    link = Link("https://acme.ie/vacancies/1", title, title)
+    assert parse_job_page(_advert(title), link.url, link) is not None
+
+
+def test_a_membership_page_is_not_a_role():
+    link = Link("https://acme.ie/join", "Become a Member", "")
+    html = _advert("Become a Member", "Apply online and start training today.")
+    assert parse_job_page(html, link.url, link) is None
+
+
 def test_a_page_with_nothing_to_apply_for_is_not_a_job():
     """The Irish Times' "Jobs in Co. Antrim" pages are tidy siblings with no advert."""
     link = Link("https://acme.ie/jobs/co-antrim", "Staff Officer", "")
