@@ -485,6 +485,51 @@ def test_teamtailor_expands_namespaced_locations_and_marks_remote():
     assert remote.location_raw == "Remote"
 
 
+def _teamtailor_feed(ids) -> str:
+    items = "".join(
+        f"<item><title>Role {i}</title><link>https://careers.acme.ie/jobs/{i}-role</link>"
+        "<tt:locations><tt:location><tt:city>Dublin</tt:city><tt:country>Ireland</tt:country>"
+        "</tt:location></tt:locations></item>"
+        for i in ids
+    )
+    return (f'<?xml version="1.0"?><rss version="2.0" xmlns:tt="https://teamtailor.com/rss">'
+            f"<channel>{items}</channel></rss>")
+
+
+@respx.mock
+def test_teamtailor_reads_a_board_past_the_feeds_hundred_posting_page(monkeypatch):
+    from jobfinder.sources.teamtailor import TeamtailorAdapter
+
+    monkeypatch.setattr(TeamtailorAdapter, "polite_pause", staticmethod(lambda: None))
+    feed = respx.get("https://careers.acme.ie/jobs.rss").mock(side_effect=[
+        httpx.Response(200, text=_teamtailor_feed(range(1, 101))),
+        httpx.Response(200, text=_teamtailor_feed(range(101, 115))),
+    ])
+
+    result = TeamtailorAdapter().fetch("careers.acme.ie")
+
+    assert result.status is CrawlStatus.OK
+    assert len(result.jobs) == 114
+    assert result.jobs[-1].source_job_id == "114"
+    assert "offset" not in feed.calls[0].request.url.params
+    assert feed.calls[1].request.url.params["offset"] == "100"
+
+
+@respx.mock
+def test_teamtailor_site_that_ignores_the_offset_is_a_sample(monkeypatch):
+    from jobfinder.sources.teamtailor import TeamtailorAdapter
+
+    monkeypatch.setattr(TeamtailorAdapter, "polite_pause", staticmethod(lambda: None))
+    respx.get("https://careers.acme.ie/jobs.rss").mock(
+        return_value=httpx.Response(200, text=_teamtailor_feed(range(1, 101)))
+    )
+
+    result = TeamtailorAdapter().fetch("careers.acme.ie")
+
+    assert result.status is CrawlStatus.PARTIAL
+    assert len(result.jobs) == 100
+
+
 def test_teamtailor_bare_subdomain_and_custom_host_both_address_a_feed():
     from jobfinder.sources.teamtailor import feed_url
 

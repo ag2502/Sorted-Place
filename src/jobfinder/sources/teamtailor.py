@@ -1,11 +1,15 @@
 """Teamtailor careers adapter.
 
-    https://{host}/jobs.rss
+    https://{host}/jobs.rss?offset={n}
 
 Every Teamtailor career site — whether on `{slug}.teamtailor.com` or a custom domain such
 as `careers.phorest.com` — serves an unauthenticated RSS feed of all published jobs, with
 structured locations in a `tt:` namespace. The JSON API needs a per-customer key; the
 feed does not, and carries the same postings.
+
+The feed holds at most 100 postings and states no total, so a larger board is read in
+pages by `offset` until one comes back short. Read as a single page, White Stuff's board
+stopped at 100 of its 163 roles, and three of its five Irish ones were past the cut.
 
 The slug is either a bare Teamtailor subdomain (`acme`) or a full careers host
 (`careers.acme.ie`), because detection sees both and neither can be derived from the
@@ -24,9 +28,13 @@ from datetime import datetime
 import httpx
 from dateutil import parser as date_parser
 
-from jobfinder.sources.base import BaseAdapter, RawJob, register
+from jobfinder.sources.base import BaseAdapter, PartialJobs, RawJob, register
 
 JOB_ID = re.compile(r"/jobs/(\d+)")
+
+# The feed's fixed page size, and the most pages read before the board is a sample.
+PAGE_SIZE = 100
+MAX_PAGES = 20
 
 
 def feed_url(slug: str) -> str:
@@ -82,11 +90,30 @@ class TeamtailorAdapter(BaseAdapter):
     tier = 1
 
     def _fetch(self, slug: str, client: httpx.Client) -> list[RawJob]:
-        response = client.get(feed_url(slug))
-        response.raise_for_status()
+        jobs: list[RawJob] = []
+        seen: set[str] = set()
+        for page in range(MAX_PAGES):
+            response = client.get(
+                feed_url(slug), params={"offset": page * PAGE_SIZE} if page else None
+            )
+            response.raise_for_status()
+            items, found = self._read_page(response.content, slug)
+            fresh = [job for job in found if job.source_job_id not in seen]
+            seen.update(job.source_job_id for job in fresh)
+            jobs.extend(fresh)
+            if items < PAGE_SIZE:
+                return jobs
+            # A site that ignores the offset sends its first page again, and the roles
+            # past it cannot be read: a sample, not a board that closed them.
+            if not fresh:
+                return PartialJobs(jobs)
+            self.polite_pause()
+        return PartialJobs(jobs)
 
+    def _read_page(self, content: bytes, slug: str) -> tuple[int, list[RawJob]]:
+        """How many postings one page of the feed holds, and the jobs read from them."""
         try:
-            root = ET.fromstring(response.content)
+            root = ET.fromstring(content)
         except ET.ParseError as exc:
             raise ValueError(f"malformed Teamtailor feed for {slug!r}: {exc}") from exc
 
@@ -94,10 +121,12 @@ class TeamtailorAdapter(BaseAdapter):
         if channel is None:
             raise ValueError(f"no RSS channel in Teamtailor feed for {slug!r}")
 
+        items = 0
         jobs: list[RawJob] = []
         for item in channel:
             if _local(item.tag) != "item":
                 continue
+            items += 1
             title = _text(_child(item, "title"))
             link = _text(_child(item, "link"))
             if not title or not link:
@@ -123,7 +152,7 @@ class TeamtailorAdapter(BaseAdapter):
                     department=_text(_child(item, "department")),
                 )
             )
-        return jobs
+        return items, jobs
 
 
 register(TeamtailorAdapter())
