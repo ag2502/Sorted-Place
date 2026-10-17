@@ -26,11 +26,17 @@ is added to the town.
 
 A board for several countries can add ``ireland-only`` as a slug part: boots.jobs lists
 about 2,900 roles across the UK and Ireland, and only the Irish ones are kept.
+
+Some sites keep the place in a field the API leaves out, but list every vacancy with it
+on their careers page, as data for the page's script. ``places=`` names that page:
+``musgravegroup.com|vacancy|places=/careers/vacancies/`` reads the places of all of
+Musgrave's 49 roles from one request, where the API gave a place for two of them.
 """
 
 from __future__ import annotations
 
 import html
+import json
 import logging
 import re
 from datetime import datetime, timezone
@@ -59,12 +65,32 @@ _TERM_PLACE = re.compile(r"^(?:[a-z]+[-_])?locations?[-_]([a-z0-9-]+)$")
 _TERM_HOURS = re.compile(r"^(?:job|employment|contract)[-_]types?[-_]([a-z0-9-]+)$")
 
 
-def split_slug(slug: str) -> tuple[str, str, str | None, bool]:
+PLACES = "places="
+# One vacancy in a careers page's script data: {"id":31147,"title":...,"location":"Dublin"}.
+_LISTED_PLACE = re.compile(r'\{"id":\s*(\d+)\s*,[^{}]*?"location":\s*"((?:[^"\\]|\\.)*)"')
+
+
+def split_slug(slug: str) -> tuple[str, str, str | None, bool, str | None]:
     host, rest_base, *rest = slug.split("|") + [""]
     if not (host and rest_base):
         raise ValueError(f"WordPress slug must be 'host|rest_base', got {slug!r}")
-    place = next((part for part in rest if part and part != IRELAND_ONLY), None)
-    return host, rest_base, place, IRELAND_ONLY in rest
+    places = next((part[len(PLACES):] for part in rest if part.startswith(PLACES)), None)
+    place = next((part for part in rest if part and part != IRELAND_ONLY and not part.startswith(PLACES)), None)
+    return host, rest_base, place, IRELAND_ONLY in rest, places
+
+
+def listed_places(page: str) -> dict[str, str]:
+    """Post id to place, from the vacancy data a careers page carries for its script."""
+    found: dict[str, str] = {}
+    for post_id, raw in _LISTED_PLACE.findall(page):
+        try:
+            value = json.loads(f'"{raw}"')
+        except ValueError:
+            continue
+        value = html.unescape(value).strip()
+        if value:
+            found.setdefault(post_id, value)
+    return found
 
 
 def _title_place(title: str) -> str | None:
@@ -136,8 +162,17 @@ class WordPressAdapter(BaseAdapter):
     tier = 1
 
     def _fetch(self, slug: str, client: httpx.Client) -> list[RawJob]:
-        host, rest_base, place, irish_only = split_slug(slug)
+        host, rest_base, place, irish_only, places = split_slug(slug)
         endpoint = f"https://{host}/wp-json/wp/v2/{rest_base}"
+        listed: dict[str, str] = {}
+        if places:
+            # A page that will not load fails the read, rather than leave every role
+            # unplaced, and so hidden, until the next one.
+            response = client.get(f"https://{host}/{places.lstrip('/')}")
+            response.raise_for_status()
+            listed = listed_places(response.text)
+            if not listed:
+                raise ValueError(f"no vacancy places found on {host}/{places.lstrip('/')}")
 
         items: dict[str, dict] = {}
         total: int | None = None
@@ -159,23 +194,27 @@ class WordPressAdapter(BaseAdapter):
                 break
             self.polite_pause()
         else:
-            return PartialJobs(self._build(items, place, irish_only))
+            return PartialJobs(self._build(items, place, irish_only, listed))
 
         if total and len(items) < total:
             raise ValueError(f"WordPress listed {len(items)} of {total} posts at {endpoint}")
-        return self._build(items, place, irish_only)
+        return self._build(items, place, irish_only, listed)
 
     @staticmethod
-    def _build(items: dict[str, dict], place: str | None, irish_only: bool = False) -> list[RawJob]:
+    def _build(
+        items: dict[str, dict], place: str | None, irish_only: bool = False,
+        listed: dict[str, str] | None = None,
+    ) -> list[RawJob]:
         jobs = []
         for job_id, item in items.items():
             title = _REFERENCE.sub("", _text((item.get("title") or {}).get("rendered")))
             if not title:
                 continue
-            # A term is filed by the employer; the advert's "Location" is read from prose,
-            # where "due to the location, a car is required" reads as a place.
-            location = (_field_location(item) or _term_place(item, place) or _advert_location(item)
-                        or _title_place(title) or place)
+            # Fields, listed places and terms are filed by the employer; the advert's
+            # "Location" is read from prose, where "due to the location, a car is
+            # required" reads as a place.
+            location = (_field_location(item) or (listed or {}).get(job_id) or _term_place(item, place)
+                        or _advert_location(item) or _title_place(title) or place)
             if irish_only and not normalize_location(location).is_ireland:
                 continue
             jobs.append(RawJob(

@@ -1347,6 +1347,48 @@ def test_wordpress_reads_the_town_and_hours_from_a_posts_terms():
     assert carer.location_raw == "Cork, Ireland"
 
 
+MUSGRAVE_VACANCIES = """<div x-data="jobListings()"></div><script type="litespeed/javascript">
+function jobListings(){return{searchTerm:'',jobs:[{"id":31147,"title":"Floor Supervisor","permalink":"https:\\/\\/acme.ie\\/vacancy\\/floor-supervisor\\/","location":"Dublin","closing_date":"1 November 2026"},
+{"id":31140,"title":"Store Manager","permalink":"https:\\/\\/acme.ie\\/vacancy\\/store-manager\\/","location":"Supervalu Lurgan&#9;","closing_date":""}]}}</script>"""
+
+
+@respx.mock
+def test_wordpress_reads_places_the_api_leaves_out_from_the_careers_page():
+    """Musgrave's API gave a place for 2 of 49 roles; its vacancies page lists them all."""
+    from jobfinder.sources.wordpress import WordPressAdapter
+
+    posts = [
+        {"id": 31147, "link": "https://acme.ie/vacancy/floor-supervisor/", "title": {"rendered": "Floor Supervisor"},
+         "content": {"rendered": "<p>Join us.</p>"}},
+        {"id": 31140, "link": "https://acme.ie/vacancy/store-manager/", "title": {"rendered": "Store Manager"},
+         "content": {"rendered": "<p>Lead a store.</p>"}},
+        {"id": 31100, "link": "https://acme.ie/vacancy/credit-controller/", "title": {"rendered": "Credit Controller"},
+         "content": {"rendered": "<p>Location: Belfast</p>"}},
+    ]
+    respx.get("https://acme.ie/wp-json/wp/v2/vacancy").mock(
+        return_value=httpx.Response(200, json=posts, headers={"X-WP-Total": "3", "X-WP-TotalPages": "1"})
+    )
+    respx.get("https://acme.ie/careers/vacancies/").mock(return_value=httpx.Response(200, text=MUSGRAVE_VACANCIES))
+
+    jobs = WordPressAdapter().fetch("acme.ie|vacancy|places=/careers/vacancies/").jobs
+
+    assert [(j.title, j.location_raw) for j in jobs] == [
+        ("Floor Supervisor", "Dublin"), ("Store Manager", "Supervalu Lurgan"), ("Credit Controller", "Belfast"),
+    ]
+
+
+@respx.mock
+def test_wordpress_places_page_that_lists_nothing_fails_the_read():
+    from jobfinder.sources.wordpress import WordPressAdapter
+
+    respx.get("https://acme.ie/wp-json/wp/v2/vacancy").mock(
+        return_value=httpx.Response(200, json=[], headers={"X-WP-Total": "0", "X-WP-TotalPages": "1"})
+    )
+    respx.get("https://acme.ie/careers/vacancies/").mock(return_value=httpx.Response(200, text="<p>Redesigned</p>"))
+
+    assert WordPressAdapter().fetch("acme.ie|vacancy|places=/careers/vacancies/").status is CrawlStatus.FAILED
+
+
 @respx.mock
 def test_wordpress_short_read_fails():
     from jobfinder.sources.wordpress import WordPressAdapter
