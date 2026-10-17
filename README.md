@@ -98,6 +98,7 @@ the employer.
 | 1b | `lidl` | Lidl's own job site API; whole adverts, contract type included |
 | 3 | `jsonld` | Generic `schema.org/JobPosting` extraction from any careers site |
 | 3 | `vacancy_table` | A careers page listing its vacancies as table rows, columns found by their headings |
+| 3 | `smoothcareers` | Smooth Careers lists on Shopify shops; every card read, each role's own page adding its advert |
 | 4 | `adzuna` | Licensed aggregator; built, but Adzuna does not cover Ireland, so no source uses it |
 | 4 | `localgov` | Every council's vacancies from the LGMA's shared board |
 | 4 | `jobalert` | Irish board for employers too small for an ATS; shops, hotels, care, trades |

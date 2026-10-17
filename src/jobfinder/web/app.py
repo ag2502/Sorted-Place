@@ -627,6 +627,7 @@ PLATFORMS = {
     "wordpress": ("Company careers sites", ""),
     "vacancy_table": ("Company careers sites", ""),
     "geniusats": ("GeniusATS", ""),
+    "smoothcareers": ("Smooth Careers", "smooth.ie"),
 }
 
 # Where a job's Apply goes, for the row, the job panel and the filter bar's Platform

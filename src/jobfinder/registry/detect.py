@@ -358,17 +358,22 @@ HOSTED_SITES: list[tuple[str, re.Pattern[str]]] = [
     ("teamtailor", re.compile(r"teamtailor-cdn\.com/assets/careersite", re.I)),
     # Caffè Nero's `careers.caffenero.com` loads its styles and scripts from GeniusATS.
     ("geniusats", re.compile(r"cdn\.ats\.careers/(?:geniusats|gats-static)/", re.I)),
+    # Smooth Careers writes a Shopify shop's careers list into one of the shop's pages.
+    ("smoothcareers", re.compile(r"id=[\"']?smoothie-search-list\b", re.I)),
 ]
+# Platforms whose list is one page of the employer's site, so the page is the slug.
+PAGE_SLUGS = {"smoothcareers"}
 
 
 def detect_hosted_site(url: str, text: str) -> tuple[str, str] | None:
     """A platform's career site served on the employer's host, found by its assets."""
-    host = urlsplit(url).netloc.lower().split(":")[0]
+    parts = urlsplit(url)
+    host = parts.netloc.lower().split(":")[0]
     if not host:
         return None
     for adapter, pattern in HOSTED_SITES:
         if pattern.search(text):
-            return adapter, host
+            return adapter, (host + parts.path.rstrip("/") if adapter in PAGE_SLUGS else host)
     return None
 
 
