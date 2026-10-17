@@ -8,6 +8,7 @@ lands here.
 from __future__ import annotations
 
 import gzip
+import time
 
 import httpx
 import pytest
@@ -128,6 +129,19 @@ def test_vendor_footer_does_not_register_the_vendor_as_the_employer():
 def test_workday_compound_slug_is_assembled():
     markup = '<a href="https://acme.wd3.myworkdayjobs.com/en-US/AcmeCareers">'
     assert detect_in_text(markup) == ("workday", "acme:wd3:AcmeCareers")
+
+
+def test_a_long_token_on_a_page_is_scanned_quickly():
+    """A board's host is looked for from the start of each label. Tried from every
+    character of a 40,000 character base64url token, the scan took two minutes."""
+    token = "aB3_-x9Q" * 5_000
+    started = time.perf_counter()
+    assert detect_in_text(f'<div data-state="{token}"></div>') is None
+    assert detect_in_text(f'{token} <a href="https://acme.recruitee.com/">') == (
+        "recruitee",
+        "acme",
+    )
+    assert time.perf_counter() - started < 1
 
 
 def test_offsite_careers_link_outranks_an_onsite_one():

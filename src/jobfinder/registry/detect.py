@@ -46,6 +46,12 @@ from jobfinder.sources.base import build_client
 
 logger = logging.getLogger(__name__)
 
+# A board named by the customer's own label, `acme.recruitee.com`, is matched from the
+# start of that label. Tried from every character of a long run of letters and digits,
+# as a base64url token or a hex digest is, each try rescanned the rest of the run, and
+# one 40,000 character token on a page held up its scan for two minutes.
+LABEL_START = r"(?<![a-z0-9_-])"
+
 # Ordered: the first match wins, so more specific patterns come first.
 ATS_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("greenhouse", re.compile(r"(?:boards|job-boards)\.greenhouse\.io/(?:embed/job_board\?for=)?([a-z0-9_-]+)", re.I)),
@@ -58,9 +64,9 @@ ATS_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("smartrecruiters", re.compile(r"careers\.smartrecruiters\.com/([a-zA-Z0-9_-]+)", re.I)),
     ("smartrecruiters", re.compile(r"jobs\.smartrecruiters\.com/([a-zA-Z0-9_-]+)", re.I)),
     ("smartrecruiters", re.compile(r"api\.smartrecruiters\.com/v1/companies/([a-zA-Z0-9_-]+)", re.I)),
-    ("recruitee", re.compile(r"([a-z0-9_-]+)\.recruitee\.com", re.I)),
-    ("personio", re.compile(r"([a-z0-9_-]+)\.jobs\.personio\.(?:de|com)", re.I)),
-    ("teamtailor", re.compile(r"([a-z0-9_-]+)\.teamtailor\.com", re.I)),
+    ("recruitee", re.compile(LABEL_START + r"([a-z0-9_-]+)\.recruitee\.com", re.I)),
+    ("personio", re.compile(LABEL_START + r"([a-z0-9_-]+)\.jobs\.personio\.(?:de|com)", re.I)),
+    ("teamtailor", re.compile(LABEL_START + r"([a-z0-9_-]+)\.teamtailor\.com", re.I)),
 
     # Platforms recognised but not yet crawlable. Naming them is the point: a company on
     # Oracle Recruiting Cloud is a known quantity with a known cost to support, whereas
@@ -68,42 +74,43 @@ ATS_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     # site with no careers page at all. `bulk_detect` records these and declines to
     # register a source, so `jobfinder coverage` reports which missing adapter would buy
     # the most coverage rather than leaving it to guesswork.
-    ("oracle_recruiting", re.compile(r"([a-z0-9_-]+)\.fa\.[a-z0-9]+\.oraclecloud\.com/hcmUI/CandidateExperience", re.I)),
+    ("oracle_recruiting", re.compile(LABEL_START + r"([a-z0-9_-]+)\.fa\.[a-z0-9]+\.oraclecloud\.com/hcmUI/CandidateExperience", re.I)),
     ("successfactors", re.compile(r"career\d*\.successfactors\.(?:eu|com)/career\?company=([a-zA-Z0-9_-]+)", re.I)),
-    ("taleo", re.compile(r"([a-z0-9_-]+)\.taleo\.net", re.I)),
-    ("eightfold", re.compile(r"([a-z0-9_-]+)\.eightfold\.ai", re.I)),
-    ("icims", re.compile(r"([a-z0-9_-]+)\.icims\.com", re.I)),
+    ("taleo", re.compile(LABEL_START + r"([a-z0-9_-]+)\.taleo\.net", re.I)),
+    ("eightfold", re.compile(LABEL_START + r"([a-z0-9_-]+)\.eightfold\.ai", re.I)),
+    ("icims", re.compile(LABEL_START + r"([a-z0-9_-]+)\.icims\.com", re.I)),
     # An Avature host carries several portals; the slug is host and portal together,
     # `kpmgireland.avature.net/experiencedhires` (after an optional `en_US/`).
-    ("avature", re.compile(r"([a-z0-9_-]+\.avature\.net/(?:[a-z]{2}_[a-z]{2}/)?[a-z0-9_-]+)", re.I)),
+    ("avature", re.compile(LABEL_START + r"([a-z0-9_-]+\.avature\.net/(?:[a-z]{2}_[a-z]{2}/)?[a-z0-9_-]+)", re.I)),
 
     # Found by scanning the careers pages left BLOCKED: each of these is where a real
     # company's "view vacancies" link actually goes. Most are small or Irish systems that
     # no fingerprint list had named, so those companies looked like sites with nothing
     # to read.
-    ("bamboohr", re.compile(r"([a-z0-9_-]+)\.bamboohr\.com", re.I)),
-    ("hirehive", re.compile(r"([a-z0-9_-]+)\.hirehive\.com", re.I)),
-    ("occupop", re.compile(r"([a-z0-9_-]+)\.occupop-careers\.com", re.I)),
-    ("breezy", re.compile(r"([a-z0-9_-]+)\.breezy\.hr", re.I)),
-    ("pinpoint", re.compile(r"([a-z0-9_-]+)\.pinpointhq\.com", re.I)),
-    ("jazzhr", re.compile(r"([a-z0-9_-]+)\.applytojob\.com", re.I)),
+    ("bamboohr", re.compile(LABEL_START + r"([a-z0-9_-]+)\.bamboohr\.com", re.I)),
+    ("hirehive", re.compile(LABEL_START + r"([a-z0-9_-]+)\.hirehive\.com", re.I)),
+    ("occupop", re.compile(LABEL_START + r"([a-z0-9_-]+)\.occupop-careers\.com", re.I)),
+    ("breezy", re.compile(LABEL_START + r"([a-z0-9_-]+)\.breezy\.hr", re.I)),
+    ("pinpoint", re.compile(LABEL_START + r"([a-z0-9_-]+)\.pinpointhq\.com", re.I)),
+    ("jazzhr", re.compile(LABEL_START + r"([a-z0-9_-]+)\.applytojob\.com", re.I)),
     ("comeet", re.compile(r"comeet\.(?:com|co)/jobs/([a-z0-9_-]+)", re.I)),
     ("jobvite", re.compile(r"jobs\.jobvite\.com/([a-z0-9_-]+)", re.I)),
     ("rippling", re.compile(r"ats\.rippling\.com/(?:api/v2/board/)?([a-z0-9_-]+)", re.I)),
     ("ukg", re.compile(r"recruiting2?\.ultipro\.com/([a-z0-9]+)", re.I)),
     ("adp", re.compile(r"workforcenow\.adp\.com/[^\"'\s<>]*?[?&](?:amp;)?cid=([0-9a-f-]{36})", re.I)),
-    ("cornerstone", re.compile(r"([a-z0-9_-]+)\.csod\.com", re.I)),
-    ("peoplehr", re.compile(r"([a-z0-9_-]+)\.peoplehr\.net", re.I)),
-    ("njoyn", re.compile(r"([a-z0-9_-]+)\.njoyn\.com", re.I)),
-    ("keyhire", re.compile(r"([a-z0-9_-]+)\.keyhire\.ie", re.I)),
-    ("peoplefirst", re.compile(r"([a-z0-9_-]+)\.jobs\.people-first\.com", re.I)),
-    ("reach_ats", re.compile(r"([a-z0-9_-]+)\.reach-ats\.com", re.I)),
+    ("cornerstone", re.compile(LABEL_START + r"([a-z0-9_-]+)\.csod\.com", re.I)),
+    ("peoplehr", re.compile(LABEL_START + r"([a-z0-9_-]+)\.peoplehr\.net", re.I)),
+    ("njoyn", re.compile(LABEL_START + r"([a-z0-9_-]+)\.njoyn\.com", re.I)),
+    ("keyhire", re.compile(LABEL_START + r"([a-z0-9_-]+)\.keyhire\.ie", re.I)),
+    ("peoplefirst", re.compile(LABEL_START + r"([a-z0-9_-]+)\.jobs\.people-first\.com", re.I)),
+    ("reach_ats", re.compile(LABEL_START + r"([a-z0-9_-]+)\.reach-ats\.com", re.I)),
 ]
 
 # Workday: tenant.wdNN.myworkdayjobs.com/<locale>/<Site> - the site segment is the last
-# path component that is not a locale code.
+# path component that is not a locale code. The tenant is matched from its start, as
+# LABEL_START has it, over the characters a tenant can hold.
 WORKDAY_PATTERN = re.compile(
-    r"([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:wday/cxs/[a-z0-9-]+/)?(?:[a-z]{2}-[A-Z]{2}/)?([A-Za-z0-9_-]+)",
+    r"(?<![a-z0-9-])([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:wday/cxs/[a-z0-9-]+/)?(?:[a-z]{2}-[A-Z]{2}/)?([A-Za-z0-9_-]+)",
     re.I,
 )
 
