@@ -231,6 +231,23 @@ def test_discovers_jobs_via_sitemap_and_extracts_them():
 
 
 @respx.mock
+def test_a_named_sitemap_is_read_first():
+    """Ann Summers lists its job pages at /sitemap/jobs, which nothing declares."""
+    respx.get("https://acme.ie/robots.txt").mock(return_value=httpx.Response(200, text=ROBOTS_ALLOW))
+    named = respx.get("https://acme.ie/sitemap/jobs").mock(return_value=httpx.Response(
+        200, text="<urlset><url><loc>https://acme.ie/job/967761</loc></url></urlset>"))
+    respx.get("https://acme.ie/job/967761").mock(return_value=httpx.Response(
+        200, text=_page('{"@type":"JobPosting","title":"Festive Temp","identifier":967761,'
+                        '"jobLocation":{"address":{"addressLocality":"County Dublin","addressCountry":"Ireland"}}}')))
+    respx.route().mock(return_value=httpx.Response(404))
+
+    result = JsonLdAdapter().fetch(r"https://acme.ie/|sitemap=/sitemap/jobs|match=/job/\d+$")
+
+    assert named.called
+    assert [job.title for job in result.jobs] == ["Festive Temp"]
+
+
+@respx.mock
 def test_robots_disallow_stops_the_crawl():
     """This adapter visits sites that never invited it, so robots.txt is binding."""
     respx.get("https://acme.ie/robots.txt").mock(

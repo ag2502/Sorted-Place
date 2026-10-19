@@ -116,6 +116,19 @@ def names_its_employers(slug: str) -> bool:
     return "employers" in slug.split("|")[1:]
 
 
+def named_sitemap(slug: str) -> str | None:
+    """``url|sitemap=/sitemap/jobs``: a job sitemap robots.txt does not declare.
+
+    Ann Summers lists its job pages at ``/sitemap/jobs``, where no conventional guess
+    looks, and its careers page builds its links in the browser.
+    """
+    for option in slug.split("|")[1:]:
+        key, _, value = option.partition("=")
+        if key == "sitemap" and value:
+            return value
+    return None
+
+
 def _parse_date(value) -> datetime | None:
     if not isinstance(value, str) or not value:
         return None
@@ -397,7 +410,7 @@ class JsonLdAdapter(BaseAdapter):
             raise PermissionError(f"robots.txt disallows {careers_url}")
 
         candidates, discovery_truncated = self._discover(
-            careers_url, origin, client, robots, cap=cap, hint=hint
+            careers_url, origin, client, robots, cap=cap, hint=hint, sitemap=named_sitemap(slug)
         )
         if not candidates:
             raise ValueError(f"no job pages discovered under {careers_url}")
@@ -457,12 +470,13 @@ class JsonLdAdapter(BaseAdapter):
         *,
         cap: int = MAX_JOB_PAGES,
         hint: re.Pattern = JOB_URL_HINT,
+        sitemap: str | None = None,
     ) -> tuple[list[str], bool]:
         """Job page URLs, and whether discovery stopped before reading everything.
 
         From the sitemap if there is one and the page if not.
         """
-        urls, truncated = self._from_sitemap(origin, client, robots, cap=cap, hint=hint)
+        urls, truncated = self._from_sitemap(origin, client, robots, cap=cap, hint=hint, sitemap=sitemap)
         if urls:
             logger.debug("jsonld: %d job URLs from sitemap for %s", len(urls), origin)
             return urls, truncated
@@ -482,6 +496,7 @@ class JsonLdAdapter(BaseAdapter):
         *,
         cap: int = MAX_JOB_PAGES,
         hint: re.Pattern = JOB_URL_HINT,
+        sitemap: str | None = None,
     ) -> tuple[list[str], bool]:
         """Job URLs listed in the site's sitemap, and whether some sitemaps went unread.
 
@@ -492,6 +507,8 @@ class JsonLdAdapter(BaseAdapter):
         fallbacks = [f"{origin}/sitemap.xml", f"{origin}/sitemap_index.xml"]
         # Declared sitemaps first; the conventional locations are only a fallback.
         queue = robots.sitemaps() + fallbacks
+        if sitemap:
+            queue.insert(0, urljoin(origin + "/", sitemap))
         visited: set[str] = set()
         fetched = 0
 
