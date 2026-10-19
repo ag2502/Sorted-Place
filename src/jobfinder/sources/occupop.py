@@ -20,7 +20,8 @@ single-page app. The same frame is served under the BidRecruit name
 `frame:api.bidrecruit.io/{token}`. A single-site employer whose places the location
 parser cannot read (National Concert Hall's "Earlsfort Terrace") may add its town,
 `frame:{token}|Dublin, Ireland`; it is appended only where a job's own place is not
-already read as Irish.
+already read as Irish. An employer whose own site renders the frame's rows, fetching
+them itself, is read from that page instead, `page:{url}`.
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ FRAME = "https://{host}/api/jobs-frame/{token}"
 FRAME_HOST = "api.occupop.com"
 FRAME_PREFIX = "frame:"
 NO_VACANCIES = "no live vacancies"
+PAGE_PREFIX = "page:"
 
 LIVE_JOBS = """
 query LiveJobs($companyKey: String!) {
@@ -86,20 +88,13 @@ def _date(value):
         return None
 
 
-def frame_jobs(token: str, client: httpx.Client) -> list[RawJob]:
-    """The postings in an embedded vacancy frame, `token` or `host/token`, `|place`."""
+def read_frame(html: str, place: str | None = None) -> list[RawJob]:
+    """The postings in a vacancy frame's markup: a table row for each in Occupop's own
+    frame, a `div.job-item` where an employer's site renders the same rows itself."""
     from jobfinder.normalize.location import normalize_location
 
-    token, _, place = token.partition("|")
-    host, _, bare = token.rpartition("/")
-    response = client.get(
-        FRAME.format(host=host or FRAME_HOST, token=bare),
-        params={"visibility": "external", "fields": "title,type,location,sector"},
-    )
-    response.raise_for_status()
-
-    jobs: list[RawJob] = []
-    for row in HTMLParser(response.text).css("tr"):
+    jobs: dict[str, RawJob] = {}
+    for row in HTMLParser(html).css("tr, div.job-item"):
         link = row.css_first("h4.title a")
         if link is None:
             continue
@@ -115,22 +110,57 @@ def frame_jobs(token: str, client: httpx.Client) -> list[RawJob]:
         location = _small("location")
         if place and not normalize_location(location).is_ireland:
             location = f"{location}, {place}" if location else place
-        jobs.append(
-            RawJob(
-                # The apply URL's slug ends in the job's own identifier and is stable.
-                source_job_id=url.rstrip("/").rsplit("/", 1)[-1],
-                title=title,
-                url=url,
-                location_raw=location,
-                department=_small("category"),
-                employment_type=_small("type"),
-            )
-        )
+        # The apply URL's slug ends in the job's own identifier and is stable.
+        job_id = url.rstrip("/").rsplit("/", 1)[-1]
+        jobs.setdefault(job_id, RawJob(
+            source_job_id=job_id,
+            title=title,
+            url=url,
+            location_raw=location,
+            department=_small("category"),
+            employment_type=_small("type"),
+        ))
+    return list(jobs.values())
+
+
+def frame_jobs(token: str, client: httpx.Client) -> list[RawJob]:
+    """The postings in an embedded vacancy frame, `token` or `host/token`, `|place`."""
+    token, _, place = token.partition("|")
+    host, _, bare = token.rpartition("/")
+    response = client.get(
+        FRAME.format(host=host or FRAME_HOST, token=bare),
+        params={"visibility": "external", "fields": "title,type,location,sector"},
+    )
+    response.raise_for_status()
+
+    jobs = read_frame(response.text, place or None)
     # A frame with nothing open says so, as Faithlegg's did on 19 Oct 2026: "There are
     # no live vacancies currently". Anything else without a row is a broken read.
     empty = "jobs-frame" in response.text or "no-results" in response.text or NO_VACANCIES in response.text
     if not jobs and not empty:
         raise ValueError(f"Occupop frame {token!r} returned no job table")
+    return jobs
+
+
+def page_jobs(target: str, client: httpx.Client) -> list[RawJob]:
+    """The postings on an employer's page that renders the frame's rows itself, `url|place`.
+
+    Blackrock Health's careers page lists its five hospitals' roles so, fetched on its
+    own server from a feed it never names, each linking to an Occupop apply page."""
+    from urllib.parse import urlsplit
+
+    from jobfinder.sources.jsonld import RobotsPolicy
+
+    url, _, place = target.partition("|")
+    parts = urlsplit(url)
+    if not RobotsPolicy(f"{parts.scheme}://{parts.netloc}", client).allows(url):
+        raise PermissionError(f"robots.txt disallows {url}")
+    response = client.get(url)
+    response.raise_for_status()
+    jobs = read_frame(response.text, place or None)
+    if not jobs and NO_VACANCIES not in response.text:
+        # The page redesigned or the feed down: failing keeps the last good list.
+        raise ValueError(f"no Occupop vacancy rows on {url}")
     return jobs
 
 
@@ -141,6 +171,8 @@ class OccupopAdapter(BaseAdapter):
     def _fetch(self, slug: str, client: httpx.Client) -> list[RawJob]:
         if slug.startswith(FRAME_PREFIX):
             return frame_jobs(slug[len(FRAME_PREFIX):], client)
+        if slug.startswith(PAGE_PREFIX):
+            return page_jobs(slug[len(PAGE_PREFIX):], client)
 
         jobs: list[RawJob] = []
         for item in live_jobs(slug, client):

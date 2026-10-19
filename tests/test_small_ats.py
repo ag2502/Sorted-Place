@@ -365,6 +365,40 @@ def test_an_occupop_frame_with_nothing_open_is_an_empty_board_not_a_failure():
     assert OccupopAdapter().fetch("frame:tok8").status is CrawlStatus.FAILED
 
 
+# Blackrock Health's careers page on 19 Oct 2026: the frame's rows, rendered by the site.
+PAGE_ROWS = """<html><body><div id="occupop-job-feed">
+<div class="job-item d-flex" id="job-item-197267"><div class="p-2 flex-grow-1"><h4 class="title">
+<a href="https://api.occupop.com/shared/job/bank-staff-nurse-d931b" target="_blank">Bank Staff Nurse</a><br>
+<small class="company"><i class="fa fa-map-marker"></i> Blackrock Health Hermitage Clinic </small>
+<small class="location"><i class="fa fa-map-marker"></i> Lucan, Co. Dublin, Ireland </small>
+<small class="category"><i class="fa fa-tag"></i> Medical &amp; Healthcare </small>
+<small class="type hidden-xs"><i class="fa fa-clock-o"></i> part time </small></h4></div>
+<div class="p-2"><a class="btn btn-primary" href="https://api.occupop.com/shared/job/bank-staff-nurse-d931b">Apply</a></div></div>
+</div></body></html>"""
+
+
+@respx.mock
+def test_occupop_rows_rendered_on_an_employers_own_page_are_read():
+    respx.get("https://www.blackrockhealth.com/robots.txt").mock(return_value=httpx.Response(404))
+    route = respx.get("https://www.blackrockhealth.com/careers").mock(return_value=httpx.Response(200, text=PAGE_ROWS))
+
+    (job,) = OccupopAdapter().fetch("page:https://www.blackrockhealth.com/careers").jobs
+
+    assert route.called
+    assert job.title == "Bank Staff Nurse"
+    assert job.source_job_id == "bank-staff-nurse-d931b"
+    assert job.location_raw == "Lucan, Co. Dublin, Ireland"
+    assert job.employment_type == "part time"
+
+
+@respx.mock
+def test_an_employers_page_without_occupop_rows_is_a_failed_read():
+    respx.get("https://www.blackrockhealth.com/robots.txt").mock(return_value=httpx.Response(404))
+    respx.get("https://www.blackrockhealth.com/careers").mock(
+        return_value=httpx.Response(200, text="<html><body><h1>Careers</h1></body></html>"))
+    assert OccupopAdapter().fetch("page:https://www.blackrockhealth.com/careers").status is CrawlStatus.FAILED
+
+
 @respx.mock
 def test_pinpoint_reads_a_board_on_the_employers_own_domain():
     """River Island's Pinpoint board is careers.riverisland.com, not *.pinpointhq.com."""
