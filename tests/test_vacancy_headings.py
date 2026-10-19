@@ -182,6 +182,18 @@ def test_card_titles_are_read_when_neither_headings_nor_bold_lines_name_a_role()
     assert is_part_time(rooms.title, html_to_text(rooms.description), rooms.employment_type)
     assert not is_part_time(waiter.title, html_to_text(waiter.description), waiter.employment_type)
 
+
+def test_a_heading_over_a_group_of_roles_is_not_a_role():
+    page = """<html><body><h1>Careers</h1><p>Join our team.</p>
+    <h3>Chef/Kitchen/Café Vacancies</h3>
+    <h3>Café Supervisor</h3><p>Location: Arboretum Kilquade, Wicklow</p>
+    <h3>Deli Assistant (Full-Time)</h3><p>Location: Leighlinbridge, Carlow</p>
+    </body></html>"""
+
+    _, jobs = read_headings(page, PAGE)
+
+    assert [job.title for job in jobs] == ["Café Supervisor", "Deli Assistant (Full-Time)"]
+
 def test_the_first_short_line_under_a_role_places_it():
     _, jobs = read_headings(CAFES, PAGE)
 

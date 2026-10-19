@@ -60,6 +60,9 @@ BLOCKS = {
 }
 
 HOURS = re.compile(r"\b(?:full|part)[- ]?time\b", re.I)
+# A heading over a group of roles, as Arboretum heads its café roles
+# "Chef/Kitchen/Café Vacancies"; the roles are the headings under it.
+GROUP = re.compile(r"\b(?:vacancies|roles|jobs|positions|openings|opportunities)$", re.I)
 # What any careers page says somewhere. A page saying none of it is not the careers page
 # any more, and reading it as one with nothing open would close every role.
 CAREERS_WORDS = re.compile(
@@ -84,7 +87,7 @@ def _clean(text: str | None) -> str:
 
 
 def _is_role(text: str) -> bool:
-    if not 4 <= len(text) <= 150:
+    if not 4 <= len(text) <= 150 or GROUP.search(text):
         return False
     return _reads_as_role(text) or bool(HOURS.search(text))
 
