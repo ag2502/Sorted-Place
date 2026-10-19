@@ -19,7 +19,7 @@ workable,ats,1,public api,in use,Structured city/country so location is unambigu
 smartrecruiters,ats,1,public api,in use,Native country=ie facet; unknown tenant returns 200 + empty
 recruitee,ats,1,public api,in use,Full advert in the list response; one request per board
 personio,ats,1,public api,built,XML feed; tenant may live on .de or .com
-teamtailor,ats,1,api key,detected only,Public API needs a key; job pages fall back to jsonld
+teamtailor,ats,1,public,in use,"Unauthenticated jobs.rss feed on teamtailor.com or a custom domain (careers.phorest.com); 100 per feed and no total, so read in pages by offset (White Stuff stopped at 100 of 163)"
 bamboohr,ats,1,public api,open api,{slug}.bamboohr.com/careers/list - common among Irish SMEs
 jazzhr,ats,1,public api,open api,Public board feed per employer
 breezy,ats,1,public api,in use,{slug}.breezy.hr/json; descriptions read from each position page; board names its owner
@@ -28,13 +28,21 @@ healthbox,ats,1,public,in use,"HealthBox HR (Irish) - app.hbhr.io/jobs-feed/web/
 pageup,ats,1,public,in use,"PageUp - one RSS feed per tenant (careers.pageuppeople.com/{tenant}/cw/en/rss) with structured location and work type (Halfords, tenant 806)"
 sociallyrecruited,ats,1,public,in use,"SociallyRecruited career sites (DFS) - country filter applies only to a POSTed search; job pages carry JobPosting markup; robots crawl-delay 10s honoured"
 peoplehr,ats,1,not accessible,not accessible,"Access PeopleHR - {slug}.peoplehr.net robots.txt disallows everything (DPD Ireland, Family Carers Ireland, Irish Guide Dogs)"
-eploy,ats,1,not accessible,not accessible,Eploy - Aldi's careers.aldirecruitment.ie sits behind a Cloudflare managed challenge; not bypassed
-tribepad,ats,1,scrape only,scrape only,Tribepad - Tesco's apply.tesco-careers.com lists nothing without a login and its search site refuses non-browsers (HTTP 403)
+eploy,ats,1,not accessible,scrape only,"Eploy - no reader. Aldi's careers.aldirecruitment.ie sits behind a Cloudflare managed challenge (not bypassed); JD Wetherspoon, Travelodge and Sunglass Hut also hire through Eploy"
+tribepad,ats,1,scrape only,scrape only,Tribepad - no reader. Tesco's apply.tesco-careers.com lists nothing without a login and its search site refuses non-browsers (HTTP 403); Vue also uses it
 comeet,ats,1,public api,open api,Public positions endpoint per employer
 pinpoint,ats,1,public api,in use,"{slug}.pinpointhq.com/postings.json; found by probing (BDO, Arthur Cox, Jones Engineering)"
 occupop,ats,1,public api,in use,Irish ATS (Dublin) - public GraphQL gateway behind {slug}.occupop-careers.com; names the hiring company
 hirehive,ats,1,public api,in use,Irish ATS (Cork) - paginated public board API; slug must resemble the company
-rezoomo,ats,1,scrape only,open api,"Irish ATS - job pages carry JobPosting markup, so careers pages listing them are read by careers_html"
+harri,ats,1,public api,in use,"Restaurant and hotel ATS - public gateway search by brand or group id, 200 a time beside the total; KFC, Carluccio's, Hawksmoor and others, the Irish shops kept by address"
+hireroad,ats,1,public api,in use,HireRoad careers pages (app.hireroadrecruit.com) - public JSON list checked against its total; Regatta Ireland's board kept apart from the UK one
+geniusats,ats,1,public,in use,GeniusATS career sites - one post to /search/searchvacancies returns every vacancy with its count; Caffè Nero
+postingpanda,ats,1,public,in use,"PostingPanda (Talos360) store job boards - Domino's storejobs.dominos.co.uk, server rendered with its own count; the country filter covers the island, so only places in the Republic are kept"
+smoothcareers,ats,1,public,in use,"Smooth Careers (careers.smooth.ie) - Irish app writing a Shopify shop's careers pages; cards give title, store and hours, each role page carries JobPosting markup"
+emply,ats,1,scrape only,scrape only,Emply - no reader yet; Søstrene Grene's list names Irish stores
+talentfunnel,ats,1,scrape only,scrape only,TalentFunnel career sites - no reader yet; The Ivy (careers.ivycollection.com)
+kallidus,ats,1,scrape only,scrape only,"Kallidus Recruit - ASP.NET postback search (Search.aspx, VacancyInformation.aspx?VId=); no reader. Iceland's board, but its Irish stores closed in 2023"
+rezoomo,ats,1,public,in use,"Irish ATS - one form post to index.cfm returns a company page's whole job list; 229 employers read on 19 Oct 2026, test and demo accounts left out"
 zoho_recruit,ats,1,api key,open api,Used by smaller Irish employers
 jobscore,ats,1,public api,open api,Public board feed
 recruiterflow,ats,1,api key,open api,Agency-oriented
@@ -49,7 +57,7 @@ eightfold,ats,1,public api,in use,"PCS X search API filtered to Ireland; tenant+
 phenom,ats,1,scrape only,detected only,Phenom People
 cornerstone,ats,1,scrape only,detected only,Cornerstone OnDemand
 jobvite,ats,1,scrape only,detected only,Jobvite
-dayforce,ats,1,scrape only,detected only,Ceridian Dayforce
+dayforce,ats,1,public,in use,"Ceridian Dayforce - JSON search after a CSRF token; Prometric, Schuh and Whitbread's Premier Inn (whb|PREMINN, whb|CANDIDATEPORTAL), the Irish hotels kept by address; behind Cloudflare, so an odd 403 is a refusal to wait out, never to evade"
 adp,ats,1,scrape only,detected only,ADP Recruiting
 ukg,ats,1,not accessible,not accessible,UKG / UltiPro - robots.txt allows */JobBoard/ but disallows the JobBoardView search API (Menzies Aviation)
 # --- Employers running their own careers platform (Tier 1b) -----------------------
@@ -64,9 +72,13 @@ ibm,bespoke,1,scrape only,not accessible,careers.ibm.com is Avature behind a bot
 intel,bespoke,1,public api,in use,Via Workday
 # --- Generic extraction (Tier 3) --------------------------------------------------
 jsonld,generic,3,public,built,schema.org/JobPosting extraction from any careers site; reaches platforms with no adapter
-volcanic,ats,1,public,in use,"Access Volcanic career sites (Woodie's, Bus Eireann, Rehab Group) - job pages carry JobPosting markup and a /job/sitemap.xml, so jsonld reads them; robots closes /api/*"
+volcanic,ats,1,public,in use,"Access Volcanic career sites (Woodie's, Bus Eireann, Rehab Group) - job pages carry JobPosting markup and a /job/sitemap.xml, so jsonld reads them; robots closes /api/*. Chadwicks Group's site adds an AWS WAF bot challenge, which is not evaded"
 recruitgenie,ats,1,public,in use,"RecruitGenie hotel career sites (Dalata, O'Callaghan) - job pages /{title}-{id}.htm carry JobPosting markup, read by jsonld with match=-\d{5,}\.htm$"
 careers_html,generic,3,public,in use,Reads a plain vacancy list from a careers page's HTML; confirms each advert before counting it
+vacancy_table,generic,3,public,in use,"Vacancies listed as rows of a table on a careers page with no page per role (Homesavers: county, role, store, job ID, hours, date)"
+vacancy_headings,generic,3,public,in use,"Vacancies written out on a careers page under their own headings, applied for by email or form (small chains); a heading counts when it reads as a role or names its hours"
+bestseller,bespoke,1,public,in use,"BESTSELLER's own jobs list (Jack & Jones, Vero Moda, Only, Vila, Name It, Selected), read for Ireland"
+application_forms,generic,3,not accessible,not accessible,"Typeform and Google Forms - an application form, not a vacancy list (Apache Pizza, Home Store + More); nothing to read"
 # --- Aggregators and job boards (Tier 4) ------------------------------------------
 adzuna,aggregator,4,not accessible,built,"Official API with a free tier, but Ireland is not one of its countries (no ie endpoint; adzuna.ie does not resolve). Built, never had a source"
 jooble,aggregator,4,needs key,needs key,Official API; free key on request; covers Ireland
