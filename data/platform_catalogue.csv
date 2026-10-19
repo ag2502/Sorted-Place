@@ -111,3 +111,4 @@ techireland,directory,5,open api,open api,Not a job board - a company directory;
 idaireland,directory,5,scrape only,open api,IDA client list - the multinational universe
 enterpriseireland,directory,5,scrape only,open api,Enterprise Ireland portfolio - the indigenous universe
 cro,directory,5,needs key,needs key,Companies Registration Office - the full legal universe of Irish companies
+jobtrain,ats,1,public,in use,"Jobtrain careers sites on the employer's domain (careers.cmetb.ie) - card list paged against its total, each role page gives the advert; Cavan and Monaghan ETB, Louth and Meath ETB"
