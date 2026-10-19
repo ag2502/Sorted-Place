@@ -52,6 +52,8 @@ logger = logging.getLogger(__name__)
 # one 40,000 character token on a page held up its scan for two minutes.
 LABEL_START = r"(?<![a-z0-9_-])"
 
+LEVER_EU = re.compile(r"(?:jobs|api)\.eu\.lever\.co/(?:v0/postings/)?([a-z0-9_-]+)", re.I)
+
 # Ordered: the first match wins, so more specific patterns come first.
 ATS_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("greenhouse", re.compile(r"(?:boards|job-boards)\.greenhouse\.io/(?:embed/job_board\?for=)?([a-z0-9_-]+)", re.I)),
@@ -335,6 +337,11 @@ def detect_in_text(text: str) -> tuple[str, str] | None:
         found = module.slug_from_url(text)
         if found:
             return adapter, found
+
+    # Lever's EU region has its own hosts, and the board its own address there.
+    for found in LEVER_EU.finditer(text):
+        if found.group(1).lower() not in SLUG_BLOCKLIST:
+            return "lever", f"eu:{found.group(1)}"
 
     for adapter, pattern in ATS_PATTERNS:
         for found in pattern.finditer(text):

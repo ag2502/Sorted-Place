@@ -8,6 +8,9 @@ same semantics as Ashby's `secondaryLocations`, and unlike Greenhouse's company-
 office is listed second.
 
 `createdAt` is epoch milliseconds.
+
+Boards hosted in Lever's EU region (`jobs.eu.lever.co/karllagerfeld`) are served by a
+separate API host and are given as `eu:{slug}`.
 """
 
 from __future__ import annotations
@@ -19,6 +22,8 @@ import httpx
 from jobfinder.sources.base import BaseAdapter, RawJob, register
 
 API_ROOT = "https://api.lever.co/v0/postings"
+EU_API_ROOT = "https://api.eu.lever.co/v0/postings"
+EU_PREFIX = "eu:"
 
 
 def _from_epoch_ms(value: object) -> datetime | None:
@@ -35,7 +40,10 @@ class LeverAdapter(BaseAdapter):
     tier = 1
 
     def _fetch(self, slug: str, client: httpx.Client) -> list[RawJob]:
-        response = client.get(f"{API_ROOT}/{slug}", params={"mode": "json"})
+        root = API_ROOT
+        if slug.startswith(EU_PREFIX):
+            root, slug = EU_API_ROOT, slug[len(EU_PREFIX):]
+        response = client.get(f"{root}/{slug}", params={"mode": "json"})
         response.raise_for_status()
         payload = response.json()
 
