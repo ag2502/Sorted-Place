@@ -97,6 +97,18 @@ def _mock(html: str):
     return respx.get(PAGE).mock(return_value=httpx.Response(200, html=html))
 
 
+# Kelly's Resort Hotel: each role a card, its title a paragraph classed "title".
+CARDS = """<html><body><h1>Job Opportunities at Kelly's</h1>
+<p>Come and join our team. Email your CV to the address below.</p>
+<div class="card"><p class="title">Waiter/Waitress</p><p class="subtitle">Full Time</p>
+<p class="description">Proven experience in a similar role.</p>
+<a class="btn btn-primary" href="https://acme.ie/celebrate/">More Info</a></div>
+<div class="card"><p class="title">Accommodation Assistant</p><p class="subtitle">Full Time/Part Time</p>
+<p class="description">Keep our rooms spotless.</p>
+<a class="btn btn-primary" href="https://acme.ie/celebrate/">More Info</a></div>
+<div class="footer"><p class="subtitle">Follow us</p></div>
+</body></html>"""
+
 def test_each_role_heading_is_a_role_with_the_text_under_it():
     careers, jobs = read_headings(DEPOTS, PAGE)
 
@@ -158,6 +170,17 @@ def test_bold_lines_are_read_when_no_heading_names_a_role():
     assert "<p>Reward</p>" in fitter.description
     assert "Application form" not in fitter.description
 
+
+def test_card_titles_are_read_when_neither_headings_nor_bold_lines_name_a_role():
+    careers, jobs = read_headings(CARDS, PAGE)
+
+    assert careers
+    waiter, rooms = jobs
+    assert waiter.title == "Waiter/Waitress"
+    assert rooms.title == "Accommodation Assistant"
+    assert "Full Time/Part Time" in rooms.description
+    assert is_part_time(rooms.title, html_to_text(rooms.description), rooms.employment_type)
+    assert not is_part_time(waiter.title, html_to_text(waiter.description), waiter.employment_type)
 
 def test_the_first_short_line_under_a_role_places_it():
     _, jobs = read_headings(CAFES, PAGE)

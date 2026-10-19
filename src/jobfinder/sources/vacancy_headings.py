@@ -48,6 +48,9 @@ from jobfinder.sources.policy import ExcludedSite, is_excluded
 
 RANKS = {"h1": 1, "h2": 2, "h3": 3, "h4": 4, "h5": 5, "h6": 6}
 BOLD = 7
+# A card's title by its class, as Kelly's Resort Hotel writes each role:
+# <p class="title">Waiter/Waitress</p><p class="subtitle">Full Time</p>.
+CARD = 8
 # Form controls, not forms: Modern Tyres' and McGuirks' pages sit wholly inside one.
 DROPPED = "script, style, noscript, header, footer, nav, svg, select, button, input, textarea, template"
 BLOCKS = {
@@ -112,7 +115,12 @@ def _stands_alone(node: Node) -> bool:
     return bool(text) and block is not None and _clean(block.text(separator=" ")) == text
 
 
-def _items(root: Node, bold: bool) -> list[tuple[int, str]]:
+def _card_title(node: Node) -> bool:
+    names = (node.attributes.get("class") or "").lower().split()
+    return any(name.endswith("title") and not name.endswith("subtitle") for name in names)
+
+
+def _items(root: Node, mode: int) -> list[tuple[int, str]]:
     """(rank, text) for each heading and (0, text) for each line, in reading order."""
     items: list[tuple[int, str]] = []
     headings: set[int] = set()
@@ -129,8 +137,8 @@ def _items(root: Node, bold: bool) -> list[tuple[int, str]]:
 
     for node in root.traverse(include_text=True):
         rank = RANKS.get(node.tag) or (
-            BOLD if bold and node.tag in ("strong", "b") and _stands_alone(node) else 0
-        )
+            BOLD if mode == BOLD and node.tag in ("strong", "b") and _stands_alone(node) else 0
+        ) or (CARD if mode == CARD and node.tag != "-text" and _card_title(node) else 0)
         if rank:
             flush()
             text = _clean(node.text(separator=" "))
@@ -176,8 +184,9 @@ def read_headings(page: str, page_url: str, place: str | None = None) -> tuple[b
 
     items: list[tuple[int, str]] = []
     rank = 0
-    for bold in (False, True):
-        items = _items(root, bold)
+    # Real headings first, then bold lines standing alone, then card titles.
+    for mode in (0, BOLD, CARD):
+        items = _items(root, mode)
         ranks = Counter(r for r, text in items if r and _is_role(text))
         if ranks:
             # The rank most role headings share; the higher one when two tie.
@@ -195,14 +204,14 @@ def read_headings(page: str, page_url: str, place: str | None = None) -> tuple[b
         if not level or level > rank:
             continue
         if level < rank or not _is_role(text):
-            if level < rank or level != BOLD:
+            if level < rank or level < BOLD:
                 context = _place(text)
             continue
 
         lines: list[str] = []
         while index < len(items):
             level, line = items[index]
-            if level and (level < rank or (level == rank and (level != BOLD or _is_role(line)))):
+            if level and (level < rank or (level == rank and (level < BOLD or _is_role(line)))):
                 break
             lines.append(line)
             index += 1
