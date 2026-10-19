@@ -641,7 +641,9 @@ def _probe_count(adapter: str, payload) -> int:
     if adapter == "hirehive":
         return len(payload.get("items") or [])
     if adapter == "pinpoint":
-        return len(payload.get("data") or [])
+        from jobfinder.sources.pinpoint import is_sample_board
+
+        return 0 if is_sample_board(payload) else len(payload.get("data") or [])
     return len(payload.get("jobs") or [])
 
 

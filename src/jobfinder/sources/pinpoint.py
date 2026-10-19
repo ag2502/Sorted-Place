@@ -11,6 +11,10 @@ Locations carry a city and province but no country, and a remote role says so on
 The feed does not name the board's owner; registration relies on the slug resembling
 the company.
 
+Pinpoint also sets up boards to show a prospect, filled with its sample roles ("Head of
+DEI - UK" in London, "Marketing Manager" in Paris, requisitions 0001 upward). Waterstones,
+Cineworld and Joe & The Juice each had one on 19 Oct 2026; nothing on them is a vacancy.
+
 A board on the employer's own domain (River Island's careers.riverisland.com) serves the
 same feed there, so a slug containing a dot is taken as the host itself.
 """
@@ -51,6 +55,17 @@ def _description(item: dict) -> str | None:
     return "\n".join(blocks) or None
 
 
+def is_sample_board(payload: object) -> bool:
+    """A board Pinpoint filled with its sample roles to show a prospect."""
+    items = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(items, list) or not items:
+        return False
+    requisitions = [str((item.get("job") or {}).get("requisition_id") or "") for item in items]
+    return any(str(item.get("title") or "").startswith("Head of DEI") for item in items) and all(
+        len(req) == 4 and req.startswith("000") for req in requisitions
+    )
+
+
 class PinpointAdapter(BaseAdapter):
     name = "pinpoint"
     tier = 1
@@ -62,6 +77,8 @@ class PinpointAdapter(BaseAdapter):
         payload = response.json()
         if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
             raise ValueError(f"unexpected Pinpoint payload for {slug!r}")
+        if is_sample_board(payload):
+            return []
 
         jobs: list[RawJob] = []
         for item in payload["data"]:

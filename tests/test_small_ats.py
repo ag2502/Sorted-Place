@@ -365,6 +365,36 @@ def test_pinpoint_reads_a_board_on_the_employers_own_domain():
     assert route.called and jobs[0].url == "https://careers.riverisland.com/en/postings/7"
 
 
+# A board Pinpoint fills with its sample roles to show a prospect, as Cineworld's was.
+PINPOINT_SAMPLE = {"data": [
+    {"id": 1, "title": "Head of DEI - UK", "location": {"city": "London"}, "job": {"requisition_id": "0003"}},
+    {"id": 2, "title": "Marketing Manager", "location": {"city": "Paris"}, "job": {"requisition_id": "0002"}},
+    {"id": 3, "title": "Customer Service Rep", "location": {"city": "New York"}, "job": {"requisition_id": "0001"}},
+]}
+
+
+@respx.mock
+def test_a_pinpoint_board_of_sample_roles_has_no_vacancies_and_is_not_probed_as_found():
+    from jobfinder.registry.detect import probe_platforms
+    from jobfinder.sources.pinpoint import PinpointAdapter
+
+    respx.get("https://cineworld.pinpointhq.com/postings.json").mock(
+        return_value=httpx.Response(200, json=PINPOINT_SAMPLE))
+    respx.route().mock(return_value=httpx.Response(404))
+
+    result = PinpointAdapter().fetch("cineworld")
+    assert result.status is CrawlStatus.OK and result.jobs == []
+    assert probe_platforms(["cineworld"], expected_name="Cineworld").found is False
+
+
+@respx.mock
+def test_a_real_pinpoint_board_numbering_its_requisitions_is_read():
+    board = {"data": [{"id": 1, "title": "Sales Assistant", "location": {"city": "Athlone"},
+                       "job": {"requisition_id": "0001"}}]}
+    respx.get("https://acme.pinpointhq.com/postings.json").mock(return_value=httpx.Response(200, json=board))
+    assert [job.title for job in PinpointAdapter().fetch("acme").jobs] == ["Sales Assistant"]
+
+
 @respx.mock
 def test_occupop_frame_can_be_served_under_another_host():
     """NCBI's board is the same frame under the BidRecruit name."""
