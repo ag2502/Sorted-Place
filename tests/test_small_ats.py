@@ -354,6 +354,18 @@ def test_occupop_reads_a_vacancy_frame_embedded_in_an_employers_own_site():
 
 
 @respx.mock
+def test_an_occupop_frame_with_nothing_open_is_an_empty_board_not_a_failure():
+    page = "<html><body><p>There are no live vacancies currently. Please check back in again soon!</p></body></html>"
+    respx.get(url__startswith="https://api.occupop.com/api/jobs-frame/tok7").mock(return_value=httpx.Response(200, text=page))
+    result = OccupopAdapter().fetch("frame:tok7")
+    assert result.status is CrawlStatus.OK and result.jobs == []
+
+    respx.get(url__startswith="https://api.occupop.com/api/jobs-frame/tok8").mock(
+        return_value=httpx.Response(200, text="<html><body><p>Service unavailable</p></body></html>"))
+    assert OccupopAdapter().fetch("frame:tok8").status is CrawlStatus.FAILED
+
+
+@respx.mock
 def test_pinpoint_reads_a_board_on_the_employers_own_domain():
     """River Island's Pinpoint board is careers.riverisland.com, not *.pinpointhq.com."""
     from jobfinder.sources.pinpoint import PinpointAdapter

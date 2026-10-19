@@ -35,6 +35,7 @@ GATEWAY = "https://gateway.server.occupop.com/graphql"
 FRAME = "https://{host}/api/jobs-frame/{token}"
 FRAME_HOST = "api.occupop.com"
 FRAME_PREFIX = "frame:"
+NO_VACANCIES = "no live vacancies"
 
 LIVE_JOBS = """
 query LiveJobs($companyKey: String!) {
@@ -125,7 +126,10 @@ def frame_jobs(token: str, client: httpx.Client) -> list[RawJob]:
                 employment_type=_small("type"),
             )
         )
-    if not jobs and "jobs-frame" not in response.text and "no-results" not in response.text:
+    # A frame with nothing open says so, as Faithlegg's did on 19 Oct 2026: "There are
+    # no live vacancies currently". Anything else without a row is a broken read.
+    empty = "jobs-frame" in response.text or "no-results" in response.text or NO_VACANCIES in response.text
+    if not jobs and not empty:
         raise ValueError(f"Occupop frame {token!r} returned no job table")
     return jobs
 
