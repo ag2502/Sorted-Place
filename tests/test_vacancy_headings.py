@@ -239,3 +239,47 @@ def test_a_page_robots_txt_closes_is_not_read():
     result = VacancyHeadingsAdapter().fetch(PAGE)
     assert result.status is CrawlStatus.FAILED
     assert "robots.txt" in (result.error or "")
+
+
+def test_an_accordion_headings_title_is_read_through_its_button():
+    # Shaped like Edvard & Pink's careers page on 19 Oct 2026.
+    page = """<html><body><h2>Careers at Edvard &amp; Pink</h2><h3>Our Vacancies</h3>
+    <h3 class="wp-block-woocommerce-accordion-header"><button class="accordion-item__toggle">
+    <span>Massage Therapist</span><span class="accordion-item__toggle-icon"><svg></svg></span></button></h3>
+    <div><p>Apply now by emailing careers@edvardandpink.ie</p></div></body></html>"""
+
+    _, jobs = read_headings(page, PAGE)
+
+    assert [job.title for job in jobs] == ["Massage Therapist"]
+
+
+def test_a_hosts_heading_reads_as_a_role():
+    # Jump Zone's: an <h2> for the role, an <h3> for each of its parts.
+    page = """<html><body><h1>Join the team at Jump Zone!</h1>
+    <h2>Court Monitor / Party Host</h2><h3>Court Monitor</h3><p>Monitor the trampoline areas.</p>
+    <h3>Party Host</h3><p>Host parties held at the park.</p>
+    <h3>Benefits</h3><p>Extremely flexible working. To apply, upload your CV.</p></body></html>"""
+
+    _, jobs = read_headings(page, PAGE)
+
+    (role,) = jobs
+    assert role.title == "Court Monitor / Party Host"
+    assert "Host parties held at the park." in role.description
+
+
+def test_a_bold_first_line_broken_from_its_paragraph_is_a_role():
+    # Tote Ireland's recruitment page on 19 Oct 2026.
+    page = """<html><body><h2>Recruitment</h2>
+    <p><strong>Part Time Racecourse Work With Tote - Recruiting Now</strong><br><br>Tote Ireland are
+    recruiting part time staff to sell bets at racecourses around Ireland.<br><br>To apply, please
+    send your CV to <strong><a href="/email">jobs@tote.ie</a></strong>.</p></body></html>"""
+
+    _, jobs = read_headings(page, PAGE, "Ireland")
+
+    (role,) = jobs
+    assert role.title == "Part Time Racecourse Work With Tote - Recruiting Now"
+    assert "sell bets at racecourses" in role.description
+    assert role.location_raw == "Ireland"
+    # A bold lead-in that runs on into its sentence is no heading.
+    _, jobs = read_headings(page.replace("</strong><br><br>", "</strong> "), PAGE, "Ireland")
+    assert jobs == []

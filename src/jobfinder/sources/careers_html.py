@@ -107,7 +107,7 @@ ROLE_WORDS = re.compile(
     # Member" adverts read as no role at all, and `lead` stops short of every "Shift
     # Leader". "Staff" and "member" count only after the place or team they belong to:
     # "Staff Wellbeing" and "Become a Member" are pages, not roles.
-    r"|leader|barista|cashier|bartender|waiter|waitress|hostess|cook|baker|butcher"
+    r"|leader|barista|cashier|bartender|waiter|waitress|hostess|host|cook|baker|butcher"
     r"|cleaner|housekeeper|receptionist|concierge|steward|stylist|hairdresser|barber"
     r"|beautician|optician|optometrist|picker|packer|installer|mechanic|fitter|operator"
     r"|courier|guard|lifeguard|carer|teacher|tutor|instructor|trainer|educator"

@@ -109,13 +109,30 @@ def _place(text: str) -> str | None:
     return ", ".join(irish) if irish else north
 
 
+def _blank(node: Node | None) -> bool:
+    return node is not None and node.tag == "-text" and not _clean(node.text_content)
+
+
 def _stands_alone(node: Node) -> bool:
-    """A bold line that is the whole of its paragraph, as a heading would be."""
+    """A bold line that is the whole of its paragraph, as a heading would be, or the
+    paragraph's first line, broken from the rest: Tote's "<p><strong>Part Time
+    Racecourse Work With Tote</strong><br><br>Tote Ireland are recruiting ..."."""
     block = node.parent
     while block is not None and block.tag not in BLOCKS:
         block = block.parent
     text = _clean(node.text(separator=" "))
-    return bool(text) and block is not None and _clean(block.text(separator=" ")) == text
+    if not text or block is None:
+        return False
+    if _clean(block.text(separator=" ")) == text:
+        return True
+    if node.parent.mem_id != block.mem_id:
+        return False
+    before, after = node.prev, node.next
+    while _blank(before):
+        before = before.prev
+    while _blank(after):
+        after = after.next
+    return before is None and after is not None and after.tag == "br"
 
 
 def _card_title(node: Node) -> bool:
@@ -178,6 +195,10 @@ def _fragment(title: str) -> str:
 def read_headings(page: str, page_url: str, place: str | None = None) -> tuple[bool, list[RawJob]]:
     """Whether the page reads as a careers page, and a role for each role heading."""
     tree = HTMLParser(page)
+    # An accordion's heading holds its title in the button that opens it, as Edvard &
+    # Pink's "<h3><button><span>Massage Therapist</span></button></h3>" does.
+    for node in tree.css(", ".join(f"{tag} button" for tag in RANKS)):
+        node.unwrap()
     for node in tree.css(DROPPED):
         node.decompose()
     root = tree.css_first("main") or tree.body
