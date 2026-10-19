@@ -200,6 +200,8 @@ def reconcile(
 
     source.consecutive_failures = 0
     source.last_success_at = utcnow()
+    # A breaker retry that works switches the source back on.
+    source.enabled = True
 
     seen_ids = _upsert_jobs(session, source=source, company=company, jobs=result.jobs, stats=stats)
 

@@ -106,6 +106,18 @@ def seed_companies(session: Session, path: Path | None = None) -> tuple[int, int
     return companies_added, sources_added
 
 
+def retired_keys(path: Path | None = None) -> set[tuple[str, str]]:
+    """The (adapter, slug) of every source listed in `retired_sources.csv`."""
+    path = path or DEFAULT_RETIRED
+    if not path.exists():
+        return set()
+    with path.open(newline="", encoding="utf-8-sig") as fh:
+        return {
+            ((row.get("adapter") or "").strip(), (row.get("slug") or "").strip())
+            for row in csv.DictReader(fh)
+        }
+
+
 def retire_sources(session: Session, path: Path | None = None) -> int:
     """Disable the sources listed in `retired_sources.csv`. Returns how many changed.
 

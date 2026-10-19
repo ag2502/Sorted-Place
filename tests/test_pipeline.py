@@ -279,3 +279,65 @@ def test_an_advert_that_moves_source_keeps_its_first_seen_date(
     session.expire_all()
     assert twin.url == old.url
     assert twin.first_seen_at == old.first_seen_at
+
+
+def _age_attempts(session, source, by):
+    from jobfinder.core.models import SourceCrawl
+
+    for attempt in session.execute(
+        select(SourceCrawl).where(SourceCrawl.source_id == source.id)
+    ).scalars():
+        attempt.created_at -= by
+    session.flush()
+
+
+def test_a_source_the_breaker_switched_off_is_retried_a_day_later(
+    session, adapter, scripted_source
+):
+    """Supermac's careers page failed for one night and stayed switched off for good."""
+    from datetime import timedelta
+
+    adapter.script = [FetchResult.failed("boom")]
+    for _ in range(CIRCUIT_BREAKER_THRESHOLD):
+        crawl(session, all_sources=True)
+    session.flush()
+    assert scripted_source.enabled is False
+
+    calls = adapter.calls
+    crawl(session)
+    assert adapter.calls == calls, "tried again within the day"
+
+    _age_attempts(session, scripted_source, timedelta(hours=25))
+    adapter.script = [FetchResult.failed("still down")]
+    crawl(session)
+    session.flush()
+    assert adapter.calls == calls + 1
+    assert scripted_source.enabled is False, "a retry that fails leaves it off"
+
+    _age_attempts(session, scripted_source, timedelta(hours=25))
+    adapter.script = [_ok("a")]
+    crawl(session)
+    session.flush()
+    assert scripted_source.enabled is True
+    assert scripted_source.consecutive_failures == 0
+    assert _active_ids(session) == {"a"}
+
+
+def test_a_retired_source_is_never_retried(session, adapter, scripted_source, tmp_path, monkeypatch):
+    from datetime import timedelta
+
+    from jobfinder.registry import seed
+
+    retired = tmp_path / "retired_sources.csv"
+    retired.write_text("adapter,slug,reason\nscripted,scripted,moved board\n")
+    monkeypatch.setattr(seed, "DEFAULT_RETIRED", retired)
+
+    adapter.script = [FetchResult.failed("boom")]
+    for _ in range(CIRCUIT_BREAKER_THRESHOLD):
+        crawl(session, all_sources=True)
+    _age_attempts(session, scripted_source, timedelta(days=3))
+
+    calls = adapter.calls
+    crawl(session)
+    assert adapter.calls == calls
+    assert scripted_source.enabled is False

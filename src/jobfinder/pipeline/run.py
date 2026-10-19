@@ -15,7 +15,7 @@ import logging
 from dataclasses import dataclass
 from datetime import timedelta
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from jobfinder.core.config import settings
@@ -26,10 +26,12 @@ from jobfinder.core.models import (
     JobPosting,
     JobStatus,
     Source,
+    SourceCrawl,
     utcnow,
 )
 from jobfinder.pipeline.fetcher import FetchJob, fetch_all
 from jobfinder.pipeline.state import reconcile
+from jobfinder.registry import seed
 from jobfinder.sources import load_adapters
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,10 @@ CIRCUIT_BREAKER_THRESHOLD = 10
 # How long a disabled source's jobs stay up after its last good crawl. Ten failures can
 # be one bad evening, and an outage is not evidence a job closed; two quiet days are.
 DISABLED_GRACE = timedelta(days=2)
+# A source the breaker switched off is tried again this long after its last attempt.
+# Supermac's careers page was down for one night and Salesforce's Workday board rate
+# limited one morning; both stayed off for good. A good crawl switches a source back on.
+BREAKER_RETRY = timedelta(days=1)
 
 
 @dataclass
@@ -103,6 +109,35 @@ def close_disabled_sources(session: Session) -> int:
     return len(jobs)
 
 
+def breaker_retries(
+    session: Session, *, adapter_name: str | None = None
+) -> list[tuple[Source, Company]]:
+    """Sources the breaker switched off whose last attempt is `BREAKER_RETRY` old.
+
+    A retired source is switched off on purpose, so it is never retried.
+    """
+    last_try = (
+        select(func.max(SourceCrawl.created_at))
+        .where(SourceCrawl.source_id == Source.id)
+        .correlate(Source)
+        .scalar_subquery()
+    )
+    stmt = (
+        select(Source, Company)
+        .join(Company, Source.company_id == Company.id)
+        .where(
+            Source.enabled.is_(False),
+            Source.consecutive_failures >= CIRCUIT_BREAKER_THRESHOLD,
+            or_(last_try.is_(None), last_try < utcnow() - BREAKER_RETRY),
+        )
+        .order_by(Source.id)
+    )
+    if adapter_name:
+        stmt = stmt.where(Source.adapter == adapter_name)
+    retired = seed.retired_keys()
+    return [p for p in session.execute(stmt).all() if (p[0].adapter, p[0].slug) not in retired]
+
+
 def select_sources(
     session: Session,
     *,
@@ -158,7 +193,8 @@ def select_sources(
 
     tail = sorted((p for p in pairs if in_tail(p)), key=lambda p: p[0].last_success_at)
     taken = {p[0].id for p in tail[: settings.long_tail_per_run]}
-    return [p for p in pairs if not in_tail(p) or p[0].id in taken]
+    due = [p for p in pairs if not in_tail(p) or p[0].id in taken]
+    return due + breaker_retries(session, adapter_name=adapter_name)
 
 
 def crawl(
@@ -207,7 +243,7 @@ def crawl(
         summary.closed += stats.closed
         summary.reopened += stats.reopened
 
-        if source.consecutive_failures >= CIRCUIT_BREAKER_THRESHOLD:
+        if source.enabled and source.consecutive_failures >= CIRCUIT_BREAKER_THRESHOLD:
             source.enabled = False
             logger.error(
                 "disabling %s:%s after %d consecutive failures",
