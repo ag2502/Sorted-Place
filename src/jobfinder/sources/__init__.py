@@ -47,6 +47,7 @@ def load_adapters() -> None:
         hrmanager,
         icims,
         jazzhr,
+        jobtrain,
         jobvite,
         jsonld,
         lever,

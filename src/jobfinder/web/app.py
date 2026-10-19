@@ -629,6 +629,7 @@ PLATFORMS = {
     "vacancy_headings": ("Company careers sites", ""),
     "geniusats": ("GeniusATS", ""),
     "smoothcareers": ("Smooth Careers", "smooth.ie"),
+    "jobtrain": ("Jobtrain", "jobtrain.co.uk"),
 }
 
 # Where a job's Apply goes, for the row, the job panel and the filter bar's Platform

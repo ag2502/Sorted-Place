@@ -360,6 +360,8 @@ HOSTED_SITES: list[tuple[str, re.Pattern[str]]] = [
     ("geniusats", re.compile(r"cdn\.ats\.careers/(?:geniusats|gats-static)/", re.I)),
     # Smooth Careers writes a Shopify shop's careers list into one of the shop's pages.
     ("smoothcareers", re.compile(r"id=[\"']?smoothie-search-list\b", re.I)),
+    # Jobtrain sites (`careers.cmetb.ie`) carry its favicon and its list's request URL.
+    ("jobtrain", re.compile(r"Jobtrain_favicon\.ico|data-request-url=[\"']/Home/_JobCard", re.I)),
 ]
 # Platforms whose list is one page of the employer's site, so the page is the slug.
 PAGE_SLUGS = {"smoothcareers"}
