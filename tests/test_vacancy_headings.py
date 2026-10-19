@@ -283,3 +283,17 @@ def test_a_bold_first_line_broken_from_its_paragraph_is_a_role():
     # A bold lead-in that runs on into its sentence is no heading.
     _, jobs = read_headings(page.replace("</strong><br><br>", "</strong> "), PAGE, "Ireland")
     assert jobs == []
+
+
+def test_a_heading_labelling_its_role_and_place_is_split_into_them():
+    # Millies' jobs page on 19 Oct 2026.
+    page = """<html><body><h1>Jobs Available at Millies</h1>
+    <h3>Position: Nail Technician Location: Naas, Co. Kildare</h3><p>Part time, weekends.</p>
+    <h3>Position: Warehouse Operative</h3><p>Send your CV to apply.</p></body></html>"""
+
+    _, (nails, warehouse) = read_headings(page, PAGE, "Naas, Co. Kildare, Ireland")
+
+    assert nails.title == "Nail Technician"
+    assert nails.location_raw == "Naas, Co. Kildare"
+    assert warehouse.title == "Warehouse Operative"
+    assert warehouse.location_raw == "Naas, Co. Kildare, Ireland"

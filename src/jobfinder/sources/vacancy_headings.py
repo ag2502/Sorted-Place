@@ -78,6 +78,12 @@ PLACE_WORDS = 4
 # The North's towns inside a part, as "Belfast Store" names one; the location module
 # matches them only as a whole place. "Down" is left out, a word as often as a county.
 NORTH = re.compile(r"\b(?:" + "|".join(sorted(_NORTHERN_PLACES - {"down"})) + r")\b", re.I)
+# A heading that labels its parts, as Millies writes each role:
+# "Position: Warehouse Operative Location: Naas, Co. Kildare".
+LABELLED = re.compile(
+    r"^(?:position|role|job(?: title)?|vacancy)\s*:\s*(?P<title>.+?)(?:\s+location\s*:\s*(?P<where>.+))?$",
+    re.I,
+)
 DETAIL_LINES = 3
 DETAIL_LENGTH = 80
 
@@ -240,7 +246,11 @@ def read_headings(page: str, page_url: str, place: str | None = None) -> tuple[b
             lines.append(line)
             index += 1
 
-        where = _place(text)
+        labelled = LABELLED.match(text)
+        named = None
+        if labelled:
+            text, named = labelled["title"].strip(), labelled["where"]
+        where = _place(named or text)
         if where is None:
             details = [line for line in lines[:DETAIL_LINES] if len(line) <= DETAIL_LENGTH]
             where = next(filter(None, map(_place, details)), None)
