@@ -274,12 +274,15 @@ def fetch_capped(client: httpx.Client, url: str) -> httpx.Response:
     # fingerprint silently stops matching on exactly the sites that compress — which is
     # nearly all of them. `Content-Length` is dropped for the same reason: the body has
     # been truncated and the original length is now a lie.
+    #
+    # The headers are copied as bytes: Just Eat's site sends a link header naming
+    # `careers.takeaway.com’` with a curly quote, which decoded text cannot re-encode.
     headers = httpx.Headers(
-        {
-            key: value
-            for key, value in response.headers.items()
-            if key.lower() not in {"content-encoding", "content-length"}
-        }
+        [
+            (key, value)
+            for key, value in response.headers.raw
+            if key.lower() not in {b"content-encoding", b"content-length"}
+        ]
     )
     return httpx.Response(
         status_code=response.status_code,

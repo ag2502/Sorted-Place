@@ -213,6 +213,18 @@ def test_capped_fetch_does_not_double_decode_a_compressed_body():
     assert detect_in_text(response.text) == ("greenhouse", "acme")
 
 
+@respx.mock
+def test_capped_fetch_keeps_a_header_that_is_not_ascii():
+    """Just Eat's site sends a link header ending in a curly quote."""
+    respx.get("https://acme.ie/").mock(return_value=httpx.Response(
+        200, headers=[(b"link", "<//careers.takeaway.com\u2019>; rel=preconnect".encode())], text="<p>Careers</p>"))
+
+    with build_client() as client:
+        response = fetch_capped(client, "https://acme.ie/")
+
+    assert response.text == "<p>Careers</p>"
+
+
 # ---------------------------------------------------------------------------
 # The sweep
 # ---------------------------------------------------------------------------
