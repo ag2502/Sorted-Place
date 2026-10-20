@@ -85,11 +85,15 @@ PLACE_WORDS = 4
 # matches them only as a whole place. "Down" is left out, a word as often as a county.
 NORTH = re.compile(r"\b(?:" + "|".join(sorted(_NORTHERN_PLACES - {"down"})) + r")\b", re.I)
 # A heading that labels its parts, as Millies writes each role:
-# "Position: Warehouse Operative Location: Naas, Co. Kildare".
+# "Position: Warehouse Operative Location: Naas, Co. Kildare", or Knock House Hotel's
+# "Open Position: Head Chef".
 LABELLED = re.compile(
-    r"^(?:position|role|job(?: title)?|vacancy)\s*:\s*(?P<title>.+?)(?:\s+location\s*:\s*(?P<where>.+))?$",
+    r"^(?:(?:open\s+)?(?:position|role)|job(?: title)?|title|vacancy)\s*:\s*(?P<title>.+?)"
+    r"(?:\s+location\s*:\s*(?P<where>.+))?$",
     re.I,
 )
+# A dash or bullet typed before a title: Killaloe Hotel's "- Housekeeping Associates".
+LEADING_MARK = re.compile(r"^[-–—•·*]+\s*")
 DETAIL_LINES = 3
 DETAIL_LENGTH = 80
 
@@ -259,6 +263,7 @@ def read_headings(page: str, page_url: str, place: str | None = None) -> tuple[b
             lines.append(line)
             index += 1
 
+        text = LEADING_MARK.sub("", text) or text
         labelled = LABELLED.match(text)
         named = None
         if labelled:
