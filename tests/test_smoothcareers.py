@@ -134,6 +134,17 @@ def test_a_page_without_the_list_is_a_failed_read_and_an_empty_list_is_nothing_o
     assert result.status is CrawlStatus.OK and result.jobs == []
 
 
+def test_a_card_naming_no_store_takes_the_slugs_place():
+    # Monroe's careers list on 20 Oct 2026: its cards leave the location blank.
+    page = PAGE.replace('location="Lucan"', 'location=""')
+
+    _, (installer, _, blank) = read_list(page, LISTING, "Galway, Ireland")
+
+    assert installer.location_raw == "Fonthill"
+    assert blank.location_raw == "Galway, Ireland"
+    assert read_list(page, LISTING)[1][2].location_raw is None
+
+
 def test_the_list_is_recognised_with_its_page_as_the_slug():
     assert detect_hosted_site(LISTING, PAGE) == ("smoothcareers", "www.acme.ie/pages/careers")
     # A role's own page is not the list.

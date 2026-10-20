@@ -17,7 +17,8 @@ in place of their advert while their cards stayed up. Such a role links to the l
 where its card is, rather than to a page that says nothing of it.
 
 The slug is the careers page: the list is one page of the shop, not the whole site.
-robots.txt is honoured as it is by the other readers of an employer's own pages.
+`page|place=WHERE` gives a one-venue employer's place to cards that name none, as
+Monroe's in Galway leaves its cards' location blank. robots.txt is honoured as it is by the other readers of an employer's own pages.
 """
 
 from __future__ import annotations
@@ -67,7 +68,7 @@ def _card_date(card: Node):
     return None
 
 
-def read_list(html: str, page_url: str) -> tuple[bool, list[RawJob]]:
+def read_list(html: str, page_url: str, place: str | None = None) -> tuple[bool, list[RawJob]]:
     """Whether the page holds a Smooth Careers list, and a role for each of its cards."""
     tree = HTMLParser(html)
     cards = tree.css(CARD)
@@ -87,7 +88,7 @@ def read_list(html: str, page_url: str) -> tuple[bool, list[RawJob]]:
             source_job_id=url,
             title=title[:300],
             url=url,
-            location_raw=_clean(card.attributes.get("location")) or None,
+            location_raw=_clean(card.attributes.get("location")) or place,
             posted_at=_card_date(card),
             department=team or None,
             employment_type=_label(card.attributes.get("job-type")),
@@ -100,6 +101,7 @@ class SmoothCareersAdapter(BaseAdapter):
     tier = 3
 
     def _fetch(self, slug: str, client: httpx.Client) -> list[RawJob]:
+        slug, _, place = slug.partition("|place=")
         page_url = slug if "//" in slug else f"https://{slug}"
         if is_excluded(page_url):
             raise ExcludedSite(f"{page_url} is on a site this project does not crawl")
@@ -111,7 +113,7 @@ class SmoothCareersAdapter(BaseAdapter):
         response = client.get(page_url)
         response.raise_for_status()
         listing = str(response.url)
-        found, jobs = read_list(response.text, listing)
+        found, jobs = read_list(response.text, listing, place or None)
         if not found:
             # A page whose list has gone is a broken read, not a shop with nothing open:
             # failing keeps the last good list rather than closing every role.
