@@ -14,7 +14,9 @@ Time"), with the text under it up to the next heading of its rank. A page's role
 one rank, the one most role-like headings have: Soundstore heads each role with an
 <h1> and its parts with <h3>s, and its "Position: Retail Sales Consultants" <h3> is part
 of a role, not another. A page with no heading for its roles, Modern Tyres', may give
-each a bold line instead, and those are read when nothing else is.
+each a bold line instead, and those are read when nothing else is. Failing those, a
+bullet that is a role's whole title ("Kitchen Assistant/Porter") heads the role, with
+the paragraphs after it as its text.
 
 A role's place is the one its title names, else one in its first short lines
 ("Full-time · Galway"), else the one named by a heading above the roles' rank (Horans
@@ -51,6 +53,10 @@ BOLD = 7
 # A card's title by its class, as Kelly's Resort Hotel writes each role:
 # <p class="title">Waiter/Waitress</p><p class="subtitle">Full Time</p>.
 CARD = 8
+# A bullet that is a role's whole title, as Drumcoura City Saloon lists its vacancies,
+# "<li><p>Kitchen Assistant/Porter</p></li>" with the role's paragraphs after the list.
+LIST = 9
+LIST_LENGTH = 80
 # Form controls, not forms: Modern Tyres' and McGuirks' pages sit wholly inside one.
 DROPPED = "script, style, noscript, header, footer, nav, svg, select, button, input, textarea, template"
 BLOCKS = {
@@ -146,6 +152,11 @@ def _card_title(node: Node) -> bool:
     return any(name.endswith("title") and not name.endswith("subtitle") for name in names)
 
 
+def _list_title(node: Node) -> bool:
+    # A node's own css() matches the node itself, so a bullet with none inside it has one.
+    return node.tag == "li" and len(node.css("li")) == 1 and len(_clean(node.text(separator=" "))) <= LIST_LENGTH
+
+
 def _items(root: Node, mode: int) -> list[tuple[int, str]]:
     """(rank, text) for each heading and (0, text) for each line, in reading order."""
     items: list[tuple[int, str]] = []
@@ -164,7 +175,9 @@ def _items(root: Node, mode: int) -> list[tuple[int, str]]:
     for node in root.traverse(include_text=True):
         rank = RANKS.get(node.tag) or (
             BOLD if mode == BOLD and node.tag in ("strong", "b") and _stands_alone(node) else 0
-        ) or (CARD if mode == CARD and node.tag != "-text" and _card_title(node) else 0)
+        ) or (CARD if mode == CARD and node.tag != "-text" and _card_title(node) else 0) or (
+            LIST if mode == LIST and _list_title(node) else 0
+        )
         if rank:
             flush()
             text = _clean(node.text(separator=" "))
@@ -214,8 +227,8 @@ def read_headings(page: str, page_url: str, place: str | None = None) -> tuple[b
 
     items: list[tuple[int, str]] = []
     rank = 0
-    # Real headings first, then bold lines standing alone, then card titles.
-    for mode in (0, BOLD, CARD):
+    # Real headings first, then bold lines standing alone, then card titles, then bullets.
+    for mode in (0, BOLD, CARD, LIST):
         items = _items(root, mode)
         ranks = Counter(r for r, text in items if r and _is_role(text))
         if ranks:

@@ -297,3 +297,23 @@ def test_a_heading_labelling_its_role_and_place_is_split_into_them():
     assert nails.location_raw == "Naas, Co. Kildare"
     assert warehouse.title == "Warehouse Operative"
     assert warehouse.location_raw == "Naas, Co. Kildare, Ireland"
+
+
+def test_bullets_that_are_a_roles_whole_title_head_the_roles_when_nothing_else_does():
+    # Drumcoura City Saloon's careers page on 20 Oct 2026, a Wix site.
+    page = """<html><body><p>Current situations vacant:</p>
+    <p>To apply for any of the positions below please email your CV to dcsaloonmanager@gmail.com</p>
+    <ul><li><p>Restaurant/Bar Manager</p></li></ul>
+    <p>Experienced Restaurant &amp; Bar Manager required. Full time position.</p>
+    <ul><li><p>Kitchen Assistant/Porter</p></li></ul>
+    <p>Training can be provided. Rota will include weekends and evenings. Full or Part time</p>
+    <ul><li><p>Free parking for staff</p></li></ul></body></html>"""
+
+    _, (manager, porter) = read_headings(page, PAGE, "Ballinamore, Co. Leitrim, Ireland")
+
+    assert manager.title == "Restaurant/Bar Manager"
+    assert "Full time position" in manager.description
+    assert porter.title == "Kitchen Assistant/Porter"
+    assert "Full or Part time" in porter.description
+    # A bullet that is no role is part of the role above it, not a role of its own.
+    assert "Free parking for staff" in porter.description
