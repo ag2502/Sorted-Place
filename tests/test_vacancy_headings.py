@@ -304,12 +304,16 @@ def test_a_label_or_dash_typed_before_a_title_is_not_part_of_it():
     # Knock House Hotel's and Killaloe Hotel's careers pages on 20 Oct 2026.
     page = """<html><body><h1>Careers</h1>
     <h3>Open Position: Head Chef</h3><p>Send your CV to apply.</p>
-    <h3>- Housekeeping Associates (full-time &amp; part-time)</h3><p>Apply by email.</p></body></html>"""
+    <h3>- Housekeeping Associates (full-time &amp; part-time)</h3><p>Apply by email.</p>
+    <h3>(1) Sexual and Reproductive Health Doctor</h3><p>Apply by email.</p>
+    <h3>2. Commis Chef</h3><p>Apply by email.</p></body></html>"""
 
-    _, (chef, housekeeping) = read_headings(page, PAGE, "Knock, Co. Mayo, Ireland")
+    _, (chef, housekeeping, doctor, commis) = read_headings(page, PAGE, "Knock, Co. Mayo, Ireland")
 
     assert chef.title == "Head Chef"
     assert housekeeping.title == "Housekeeping Associates (full-time & part-time)"
+    assert doctor.title == "Sexual and Reproductive Health Doctor"
+    assert commis.title == "Commis Chef"
 
 def test_bullets_that_are_a_roles_whole_title_head_the_roles_when_nothing_else_does():
     # Drumcoura City Saloon's careers page on 20 Oct 2026, a Wix site.

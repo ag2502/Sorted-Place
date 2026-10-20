@@ -92,8 +92,9 @@ LABELLED = re.compile(
     r"(?:\s+location\s*:\s*(?P<where>.+))?$",
     re.I,
 )
-# A dash or bullet typed before a title: Killaloe Hotel's "- Housekeeping Associates".
-LEADING_MARK = re.compile(r"^[-–—•·*]+\s*")
+# A dash, bullet or list number typed before a title: Killaloe Hotel's "- Housekeeping
+# Associates", the IFPA's "(1) Sexual and Reproductive Health Doctor".
+LEADING_MARK = re.compile(r"^(?:[-–—•·*]+\s*|\(\d{1,2}\)\s*|\d{1,2}[.)]\s+)")
 DETAIL_LINES = 3
 DETAIL_LENGTH = 80
 
