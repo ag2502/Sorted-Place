@@ -347,6 +347,7 @@ class RobotsPolicy:
 
     def __init__(self, origin: str, client: httpx.Client) -> None:
         self._parser = RobotFileParser()
+        self._origin = origin
         self._ok = True
         try:
             response = client.get(f"{origin}/robots.txt")
@@ -385,7 +386,9 @@ class RobotsPolicy:
         """
         if not self._ok:
             return []
-        return list(self._parser.site_maps() or [])
+        # Resolved against the site, since some write them without a scheme: the Pembroke
+        # Hotel's is "//pembrokekilkenny.com/xml-sitemap".
+        return [urljoin(self._origin + "/", url) for url in self._parser.site_maps() or []]
 
 
 class JsonLdAdapter(BaseAdapter):

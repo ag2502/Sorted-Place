@@ -247,6 +247,23 @@ def test_a_named_sitemap_is_read_first():
     assert [job.title for job in result.jobs] == ["Festive Temp"]
 
 
+
+@respx.mock
+def test_a_sitemap_declared_without_a_scheme_is_read_from_the_site():
+    """The Pembroke Hotel's robots.txt declares "//pembrokekilkenny.com/xml-sitemap"."""
+    respx.get("https://acme.ie/robots.txt").mock(return_value=httpx.Response(
+        200, text="User-agent: *\nAllow: /\nSitemap: //acme.ie/xml-sitemap\n"))
+    declared = respx.get("https://acme.ie/xml-sitemap").mock(return_value=httpx.Response(
+        200, text="<urlset><url><loc>https://acme.ie/jobs/chef</loc></url></urlset>"))
+    respx.get("https://acme.ie/jobs/chef").mock(return_value=httpx.Response(
+        200, text=_page('{"@type":"JobPosting","title":"Chef","identifier":1}')))
+    respx.route().mock(return_value=httpx.Response(404))
+
+    result = JsonLdAdapter().fetch("https://acme.ie/careers")
+
+    assert declared.called
+    assert [job.title for job in result.jobs] == ["Chef"]
+
 @respx.mock
 def test_robots_disallow_stops_the_crawl():
     """This adapter visits sites that never invited it, so robots.txt is binding."""
