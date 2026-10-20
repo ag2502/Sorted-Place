@@ -123,6 +123,8 @@ ROLE_WORDS = re.compile(
 ID_SEGMENT = re.compile(r"\d{3,}|[0-9a-f]{8}-[0-9a-f]{4}", re.I)
 ID_PARAMS = re.compile(r"^(job|jid|jobid|job_id|id|vacancy|vacancyid|req|reqid|posting|p|ref|position|opening)$", re.I)
 
+NATIONWIDE = re.compile(r"^(?:nationwide|various(?: locations)?|multiple locations)\.?$", re.I)
+
 # The list's name or a call to action written before each title: "Current Opportunities:
 # Kitchen Designer", "Apply Now: Parts Advisor".
 LIST_NAME = re.compile(
@@ -377,6 +379,9 @@ def parse_job_page(html: str, url: str, link: Link, place: str | None = None) ->
         return None
 
     location = _location_from(link.card) or _location_from(text)
+    # "Nationwide" from an employer hiring in Ireland alone is the whole of `place`.
+    if location and place and NATIONWIDE.match(location):
+        location = None
     if not location:
         near_top = DUBLIN_NEAR_TOP.search(f"{title}\n{text[:TOP_OF_ADVERT]}")
         location = f"{near_top.group(1)}, Ireland" if near_top else None

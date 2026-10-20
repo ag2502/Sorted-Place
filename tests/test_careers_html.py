@@ -436,3 +436,22 @@ def test_a_marked_up_advert_with_no_place_takes_dublin_from_its_title():
     )
     job = parse_job_page(html, link.url, link)
     assert job is not None and job.location_raw == "Dublin, Ireland"
+
+
+@respx.mock
+def test_a_nationwide_role_takes_the_slugs_place():
+    """Kitchen World hires in Ireland alone and gives three of its roles as "Nationwide"."""
+    _mock_site(
+        _listing(("/careers/designer", "Kitchen Designer"), ("/careers/driver", "Delivery Driver")),
+        {
+            "/careers/designer": _advert("Kitchen Designer", "Location: Nationwide"),
+            "/careers/driver": _advert("Delivery Driver", "Location: Dublin"),
+        },
+    )
+
+    result = CareersHtmlAdapter().fetch("https://acme.ie/careers|place=Ireland")
+
+    assert {job.title: job.location_raw for job in result.jobs} == {
+        "Kitchen Designer": "Ireland",
+        "Delivery Driver": "Dublin",
+    }
