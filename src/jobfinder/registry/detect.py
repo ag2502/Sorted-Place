@@ -53,6 +53,9 @@ logger = logging.getLogger(__name__)
 LABEL_START = r"(?<![a-z0-9_-])"
 
 LEVER_EU = re.compile(r"(?:jobs|api)\.eu\.lever\.co/(?:v0/postings/)?([a-z0-9_-]+)", re.I)
+# Occupop's widget, framed into the employer's own careers page by a token rather than a
+# subdomain. Bidrecruit serves the same frame from its own host.
+OCCUPOP_FRAME = re.compile(r"api\.(occupop\.com|bidrecruit\.io)/api/jobs-frame/([A-Za-z0-9]{20,})")
 
 # Ordered: the first match wins, so more specific patterns come first.
 ATS_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
@@ -342,6 +345,11 @@ def detect_in_text(text: str) -> tuple[str, str] | None:
     for found in LEVER_EU.finditer(text):
         if found.group(1).lower() not in SLUG_BLOCKLIST:
             return "lever", f"eu:{found.group(1)}"
+
+    frame = OCCUPOP_FRAME.search(text)
+    if frame:
+        host, token = frame.groups()
+        return "occupop", f"frame:{token}" if host == "occupop.com" else f"frame:api.{host}/{token}"
 
     for adapter, pattern in ATS_PATTERNS:
         for found in pattern.finditer(text):

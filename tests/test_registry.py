@@ -660,6 +660,15 @@ def test_an_unverifiable_but_distinctive_slug_is_accepted():
         # Hosts found behind the careers pages left blocked.
         ("https://nuritas.hirehive.com/", ("hirehive", "nuritas")),
         ("https://titanhq.occupop-careers.com/", ("occupop", "titanhq")),
+        # Occupop's widget framed into a careers page by token, as Absolute Hotel's is.
+        (
+            '<iframe src="https://api.occupop.com/api/jobs-frame/xLAp9QnSaV2TlCYhgrpAxgmlyJnpf8IRc1ZIzszFr2DzNAQ8Ko?&amp;search=1">',
+            ("occupop", "frame:xLAp9QnSaV2TlCYhgrpAxgmlyJnpf8IRc1ZIzszFr2DzNAQ8Ko"),
+        ),
+        (
+            '<iframe src="https://api.bidrecruit.io/api/jobs-frame/Qx81stZVKQ2cWiIzGMyuWRMFoXVdr">',
+            ("occupop", "frame:api.bidrecruit.io/Qx81stZVKQ2cWiIzGMyuWRMFoXVdr"),
+        ),
         ("https://viatel.peoplehr.net/Pages/JobBoard", ("peoplehr", "viatel")),
         ("https://bnm.keyhire.ie/", ("keyhire", "bnm")),
         ("https://acme.breezy.hr/", ("breezy", "acme")),
