@@ -74,6 +74,9 @@ _NOT_THE_ROLE_BEFORE = re.compile(
     r"|experience\s+(?:gained|in|as|through|from|of)\b[^.\n]{0,45}$",
     re.I,
 )
+# A form's field name, "Full/Part Time: Full-Time", where only the value says the hours.
+_FIELD_NAME_BEFORE = re.compile(r"\bfull[\s\-‐]?(?:time)?\s*(?:/|or|and|&)\s*$", re.I)
+_FIELD_NAME_AFTER = re.compile(r"\s*:")
 _PAST_WORK_AFTER = re.compile(r"\s*(?:role|work|job)s?\s*(?:,|or|and)\s*(?:volunteer|universit|extra)", re.I)
 
 _LABELLED = re.compile(
@@ -138,6 +141,8 @@ def _mentions_role_hours(text: str) -> bool:
         if _NOT_THE_ROLE_AFTER.match(text, end) or _PAST_WORK_AFTER.match(text, end):
             continue
         if _NOT_THE_ROLE_BEFORE.search(text[max(0, start - 40) : start]):
+            continue
+        if _FIELD_NAME_AFTER.match(text, end) and _FIELD_NAME_BEFORE.search(text[max(0, start - 15) : start]):
             continue
         window = text[max(0, start - 60) : end + 40]
         if _LABELLED.search(window) or _STATED.search(window) or _BOTH.search(window):

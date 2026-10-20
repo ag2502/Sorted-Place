@@ -178,3 +178,11 @@ def test_a_range_of_hours_offering_a_part_time_week(description: str) -> None:
 
 def test_a_full_time_range_of_hours_is_not() -> None:
     assert not is_part_time("Support Worker", "Hours: 35-39 hours per week.", None)
+
+
+def test_a_full_or_part_time_field_name_leaves_the_answer_to_its_value() -> None:
+    """ISM's recruitment adverts carry a "Full/Part Time:" field on every role."""
+    advert = "Location: Dublin 13\nVacancy Type: Permanent\nFull/Part Time: {}\n\nSalary: €16 p/h"
+    assert not is_part_time("Bendi Forklift Driver", advert.format("Full-Time"), None)
+    assert is_part_time("Warehouse Operative", advert.format("Part-Time"), None)
+    assert is_part_time("Sales Assistant", "Full or part time hours available.", None)
