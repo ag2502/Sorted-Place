@@ -1056,3 +1056,6 @@ Kinnegar Brewing,vacancy_headings,"https://www.kinnegarbrewing.ie/down-to-busine
 Lavit Gallery,vacancy_headings,"https://lavitgallery.com/vacancies/|place=Cork, Ireland",3,false,venue-sweep,"art gallery, Cork",https://lavitgallery.com/vacancies/
 Mackdonald Language Academy,vacancy_headings,"https://www.mackdonald.com/about-us/jobs|place=Kilkenny, Ireland",3,false,venue-sweep,"English language school, Kilkenny",https://www.mackdonald.com/about-us/jobs
 Kitchen World,careers_html,https://www.kitchenworld.ie/careers|place=Ireland,3,false,venue-sweep,"kitchen showrooms, nationwide",https://www.kitchenworld.ie/careers
+ISM Recruitment,careers_html,https://ism.ie/recruitment/industrial-warehouse-jobs/,3,false,venue-sweep,"recruitment agency, industrial and warehouse roles",https://ism.ie/recruitment/industrial-warehouse-jobs/
+ISM Recruitment,careers_html,https://ism.ie/recruitment/transport-logistics-jobs/,3,false,venue-sweep,"recruitment agency, transport and logistics roles",https://ism.ie/recruitment/transport-logistics-jobs/
+ISM Recruitment,careers_html,https://ism.ie/recruitment/healthcare/,3,false,venue-sweep,"recruitment agency, healthcare roles",https://ism.ie/recruitment/healthcare/
