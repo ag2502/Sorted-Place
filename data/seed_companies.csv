@@ -1118,3 +1118,4 @@ Tulfarris Hotel and Golf Resort,occupop,tulfarris,3,false,venue-sweep,"hotel and
 Koztello Hair & Beauty,jsonld,"https://www.koztello.ie/jobs/|place=Galway, Ireland",3,false,venue-sweep,"hair and beauty salon, Knocknacarra",https://www.koztello.ie/jobs/
 Hair Creations,jsonld,https://haircreations.ie/jobs/|place=Ireland|match=/jobs/[^/]+/?$,3,false,venue-sweep,"hair salon, Blackrock",https://haircreations.ie/jobs/
 O'Donnabháin's,jsonld,"https://odonnabhain-kenmare.com/work-with-us/|place=Kenmare, Co. Kerry, Ireland",3,false,venue-sweep,"bar, restaurant and guesthouse, Kenmare",https://odonnabhain-kenmare.com/work-with-us/
+M. O'Brien's,vacancy_headings,"https://mobrienspubdublin.com/careers/|place=Dublin, Ireland",3,false,venue-sweep,"pub, Dublin",https://mobrienspubdublin.com/careers/
