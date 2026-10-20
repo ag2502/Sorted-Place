@@ -1117,3 +1117,4 @@ The SpitJack,teamtailor,thespitjack,3,false,venue-sweep,"restaurants, Cork, Lime
 Tulfarris Hotel and Golf Resort,occupop,tulfarris,3,false,venue-sweep,"hotel and golf resort, Blessington",https://tulfarris.occupop-careers.com/
 Koztello Hair & Beauty,jsonld,"https://www.koztello.ie/jobs/|place=Galway, Ireland",3,false,venue-sweep,"hair and beauty salon, Knocknacarra",https://www.koztello.ie/jobs/
 Hair Creations,jsonld,https://haircreations.ie/jobs/|place=Ireland|match=/jobs/[^/]+/?$,3,false,venue-sweep,"hair salon, Blackrock",https://haircreations.ie/jobs/
+O'Donnabháin's,jsonld,"https://odonnabhain-kenmare.com/work-with-us/|place=Kenmare, Co. Kerry, Ireland",3,false,venue-sweep,"bar, restaurant and guesthouse, Kenmare",https://odonnabhain-kenmare.com/work-with-us/
