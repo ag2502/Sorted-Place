@@ -315,6 +315,20 @@ def test_a_label_or_dash_typed_before_a_title_is_not_part_of_it():
     assert doctor.title == "Sexual and Reproductive Health Doctor"
     assert commis.title == "Commis Chef"
 
+
+def test_a_list_number_or_closing_label_around_a_title_is_not_part_of_it():
+    # Note's, The House Hotel's and MCK Electrical's careers pages on 20 Oct 2026.
+    page = """<html><body><h1>Careers</h1>
+    <h3>#1. Restaurant Manager</h3><p>Send your CV to apply.</p>
+    <h3>Night Porter:</h3><p>Apply by email.</p>
+    <h3>Warehouse Operative Duties:</h3><p>Picking and packing orders.</p></body></html>"""
+
+    _, (manager, porter, operative) = read_headings(page, PAGE, "Cork, Ireland")
+
+    assert manager.title == "Restaurant Manager"
+    assert porter.title == "Night Porter"
+    assert operative.title == "Warehouse Operative"
+
 def test_bullets_that_are_a_roles_whole_title_head_the_roles_when_nothing_else_does():
     # Drumcoura City Saloon's careers page on 20 Oct 2026, a Wix site.
     page = """<html><body><p>Current situations vacant:</p>

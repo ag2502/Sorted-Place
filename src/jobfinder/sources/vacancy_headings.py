@@ -93,8 +93,12 @@ LABELLED = re.compile(
     re.I,
 )
 # A dash, bullet or list number typed before a title: Killaloe Hotel's "- Housekeeping
-# Associates", the IFPA's "(1) Sexual and Reproductive Health Doctor".
-LEADING_MARK = re.compile(r"^(?:[-–—•·*]+\s*|\(\d{1,2}\)\s*|\d{1,2}[.)]\s+)")
+# Associates", the IFPA's "(1) Sexual and Reproductive Health Doctor", Note's "#1.
+# Restaurant Manager".
+LEADING_MARK = re.compile(r"^(?:[-–—•·*]+\s*|\(\d{1,2}\)\s*|#?\d{1,2}[.)]\s+)")
+# A colon, or a section name and colon, closing a title that introduces its details:
+# The House Hotel's "Night Porter:", MCK Electrical's "Warehouse Operative Duties:".
+TRAILING_LABEL = re.compile(r"(?:\s+(?:duties|responsibilities|requirements))?\s*:$", re.I)
 DETAIL_LINES = 3
 DETAIL_LENGTH = 80
 
@@ -264,7 +268,7 @@ def read_headings(page: str, page_url: str, place: str | None = None) -> tuple[b
             lines.append(line)
             index += 1
 
-        text = LEADING_MARK.sub("", text) or text
+        text = TRAILING_LABEL.sub("", LEADING_MARK.sub("", text) or text) or text
         labelled = LABELLED.match(text)
         named = None
         if labelled:
