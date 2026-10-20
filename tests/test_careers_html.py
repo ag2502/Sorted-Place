@@ -139,6 +139,22 @@ def test_a_card_title_named_by_its_class_is_the_title_and_plurals_read_as_roles(
     ]
 
 
+
+def test_a_call_to_action_written_before_each_title_is_not_part_of_it():
+    """Johnson and Perrott titles every vacancy article "Apply Now: Parts Advisor"."""
+    card = (
+        '<a href="/careers-apply-now/{slug}"><div class="article-info">'
+        '<div class="article-title">Apply Now: {title}</div>'
+        '<div class="article-date">14/10/2026</div></div></a>'
+    )
+    html = "<html><body>" + "".join(
+        card.format(slug=slug, title=title)
+        for slug, title in (("apply-now-parts-advisor", "Parts Advisor"),
+                            ("apply-now-motor-technician", "Ford Motor Technician"))
+    ) + "</body></html>"
+    links = page_links(html, "https://acme.ie/careers-apply-now")
+    assert [link.text for link in links] == ["Parts Advisor", "Ford Motor Technician"]
+
 def test_a_careers_menu_is_not_a_vacancy_list():
     """Siblings under /careers/ with descriptive slugs - the shape of every brochure."""
     links = page_links(

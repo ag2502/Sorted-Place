@@ -123,10 +123,11 @@ ROLE_WORDS = re.compile(
 ID_SEGMENT = re.compile(r"\d{3,}|[0-9a-f]{8}-[0-9a-f]{4}", re.I)
 ID_PARAMS = re.compile(r"^(job|jid|jobid|job_id|id|vacancy|vacancyid|req|reqid|posting|p|ref|position|opening)$", re.I)
 
-# The list's name written before each title: "Current Opportunities: Kitchen Designer".
+# The list's name or a call to action written before each title: "Current Opportunities:
+# Kitchen Designer", "Apply Now: Parts Advisor".
 LIST_NAME = re.compile(
     r"^(?:current (?:opportunit(?:y|ies)|vacanc(?:y|ies)|openings?|roles?)|vacancy|job opening"
-    r"|now hiring|we(?:'|’)?re hiring)\s*[:–—-]\s+",
+    r"|now hiring|we(?:'|’)?re hiring|apply now)\s*[:–—-]\s+",
     re.I,
 )
 
