@@ -142,7 +142,9 @@ def iter_ld_objects(html: str):
     """Yield every JSON-LD object in a page, flattening `@graph` and arrays."""
     for block in LD_BLOCK.findall(html):
         try:
-            payload = json.loads(block.strip())
+            # Not strict: hand-written markup carries raw tabs and line breaks inside its
+            # strings, as Koztello's job descriptions do, which strict JSON refuses.
+            payload = json.loads(block.strip(), strict=False)
         except (ValueError, TypeError):
             continue
 

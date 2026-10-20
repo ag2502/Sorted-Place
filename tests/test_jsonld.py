@@ -520,3 +520,11 @@ def test_a_sites_crawl_delay_is_read_from_robots() -> None:
     assert RobotsPolicy("https://yourcareer.dfscareers.co.uk", client).crawl_delay() == 10.0
     quiet = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, text="User-agent: *\nDisallow:\n")))
     assert RobotsPolicy("https://x.ie", quiet).crawl_delay() == 0.0
+
+
+def test_markup_with_raw_tabs_in_its_strings_is_still_read():
+    """Koztello's hand-written JobPosting carries tabs inside its description."""
+    page = _page('{"@type":"JobPosting","title":"Hair Stylist","identifier":1,'
+                 '"description":"Full-Time Hair Stylist\t\tVacancies In Galway"}')
+
+    assert [obj["title"] for obj in iter_ld_objects(page)] == ["Hair Stylist"]
