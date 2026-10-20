@@ -320,12 +320,14 @@ def test_a_list_number_or_closing_label_around_a_title_is_not_part_of_it():
     # Note's, The House Hotel's and MCK Electrical's careers pages on 20 Oct 2026.
     page = """<html><body><h1>Careers</h1>
     <h3>#1. Restaurant Manager</h3><p>Send your CV to apply.</p>
+    <h3>#2 Head Barista</h3><p>Send your CV to apply.</p>
     <h3>Night Porter:</h3><p>Apply by email.</p>
     <h3>Warehouse Operative Duties:</h3><p>Picking and packing orders.</p></body></html>"""
 
-    _, (manager, porter, operative) = read_headings(page, PAGE, "Cork, Ireland")
+    _, (manager, barista, porter, operative) = read_headings(page, PAGE, "Cork, Ireland")
 
     assert manager.title == "Restaurant Manager"
+    assert barista.title == "Head Barista"
     assert porter.title == "Night Porter"
     assert operative.title == "Warehouse Operative"
 
