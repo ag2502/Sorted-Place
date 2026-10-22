@@ -1251,3 +1251,4 @@ Huawei,workable,huawei-ireland,2,false,named-check,Huawei Ireland's own Workable
 Workiva,workday,workiva:wd503:careers,2,true,named-check,Workday site on the wd503 host,https://workiva.wd503.myworkdayjobs.com/careers
 The Access Group,workday,theaccessgroup:wd103:access_group_external_careers,2,false,named-check,"owns CoreHR, the Irish HR software firm",https://www.theaccessgroup.com/en-gb/careers/
 Infosys Consulting,workable,infosys-consulting-europe,2,true,named-check,Infosys Consulting's European Workable account,https://apply.workable.com/infosys-consulting-europe/
+ID-Pal,vacancy_headings,"https://www.id-pal.com/careers/|place=Dublin, Ireland",3,false,named-check,"identity verification startup, Dublin",https://www.id-pal.com/careers/
