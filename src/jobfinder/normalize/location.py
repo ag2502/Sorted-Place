@@ -233,6 +233,14 @@ _NORTHERN_PLACES = {
 _NORTHERN_POSTCODE = re.compile(r"\bBT\d{1,2}\b")
 # A US Dublin named with its country: "Dublin, United States of America" (Workday).
 _US_COUNTRY_NAMES = {"usa", "united states", "united states of america", "u.s.a.", "u.s."}
+# Workday ends every location with its country, so in "DUBLIN METHODIST HOSPITAL, United
+# States of America" or "Sysco Atlanta - Dublin Shuttle Yard, United States of America"
+# the suffix places the whole string, wherever Dublin sits in it.
+_US_COUNTRY_SUFFIX = re.compile(
+    r",\s*(?:united states(?: of america)?|usa|u\.s\.a?\.?)\s*$", re.IGNORECASE
+)
+# Sun City West is in Arizona, not City West in Dublin 24.
+_NOT_A_LOCALITY = re.compile(r"\bsun city west\b", re.IGNORECASE)
 # The North named some other way: its six counties, or the UK itself.
 _NORTHERN_SIGNAL = re.compile(
     r"\bnorthern\s+ireland\b|\b(?:co\.?|county)\s+(?:antrim|armagh|down|fermanagh|londonderry|derry|tyrone)\b"
@@ -290,6 +298,15 @@ def _tokenize(text: str) -> list[str]:
     return [p.strip() for p in parts if p and p.strip()]
 
 
+def _is_state_code(word: str) -> bool:
+    """A capitalised state code standing as its own entry beside a place: "Wexford, PA".
+
+    The codes that collide with words are fine here, because a separator or the place
+    itself already sits before them; only "CO" is left out, which is "Co. Wexford".
+    """
+    return len(word) == 2 and word.isupper() and word.lower() in _US_STATE_CODES - {"co"}
+
+
 def _is_state(word: str) -> bool:
     """A US state as it appears beside a place name without a comma.
 
@@ -331,10 +348,13 @@ def _dublin_followed_by_us_state(text: str) -> bool:
     for match in _DUBLIN_WORD.finditer(text):
         tail = text[match.end():].lstrip()
         if tail.startswith(","):
-            tail = tail[1:].strip().lower()
+            tail = tail[1:].strip()
             if not tail:
                 continue
             # Compare against the next entry only, up to the following separator.
+            if _is_state_code(_SEPARATORS.split(tail)[0].strip()):
+                return True
+            tail = tail.lower()
             next_entry = _SEPARATORS.split(tail)[0].strip()
             if (
                 next_entry in _SAFE_STATE_CODES
@@ -370,7 +390,7 @@ def _names_abroad(tokens: list[str]) -> bool:
         word = token.strip()
         if word.lower() in _FOREIGN_COUNTRIES | _OTHER_COUNTRIES or _is_state(word):
             return True
-        if len(word) == 2 and word.isupper() and word != "IE":
+        if len(word) == 2 and word.isalpha() and word.isupper() and word != "IE":
             return True
     return False
 
@@ -431,12 +451,13 @@ def irish_region(text: str, *, names_ireland: bool, irish_board: bool = False) -
         if (
             following.lower() in _FOREIGN_COUNTRIES
             or _is_state(following)
+            or _is_state_code(following)
             or _is_state_with_zip(following)
         ):
             continue
-        # Or the state sits in the same entry: "Waterford MI".
+        # Or the state sits in the same entry: "Waterford MI", "Wexford PA".
         code = _CODE_AFTER.match(token[match.end():])
-        if code and _is_state(code.group(1)):
+        if code and (_is_state(code.group(1)) or _is_state_code(code.group(1))):
             continue
         return _PLACE_REGION[place]
     return None
@@ -473,12 +494,18 @@ def normalize_location(
     # A locality can also be embedded rather than a standalone token, e.g.
     # "Grand Canal Dock, Dublin".
     if not has_locality:
-        has_locality = any(loc in lowered for loc in _DUBLIN_LOCALITIES)
+        unlocal = _NOT_A_LOCALITY.sub(" ", lowered)
+        has_locality = any(loc in unlocal for loc in _DUBLIN_LOCALITIES)
 
     has_ireland_signal = bool(lowered_tokens & _IRELAND_SIGNALS)
     has_us_signal = bool(lowered_tokens & _US_SIGNALS)
 
     names_ireland = _names_ireland(text, lowered_tokens)
+    # One place with the US as its country, and Ireland nowhere in it. A list of offices
+    # ("Dublin, IE; New York, United States") is left to the checks below.
+    if _US_COUNTRY_SUFFIX.search(text) and not names_ireland and not re.search(r"[;|]", text):
+        result.location_norm = ", ".join(tokens)
+        return result
     # "Smithfield, RI 02917" names a Dublin neighbourhood, but the state and ZIP code
     # make it an American address.
     us_address = any(_is_state_with_zip(token) for token in tokens) and not has_ireland_signal
@@ -492,6 +519,8 @@ def normalize_location(
         and bool(
             _NORTHERN_SIGNAL.search(text)
             or lowered_tokens & (_FOREIGN_COUNTRIES | _OTHER_COUNTRIES)
+            # "Smithfield, NC": a town of the same name with its state.
+            or _names_abroad(tokens)
         )
     )
 

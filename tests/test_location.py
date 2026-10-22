@@ -415,3 +415,33 @@ def test_a_list_of_all_counties_is_still_irish() -> None:
 def test_a_dublin_named_with_the_us_is_the_american_one() -> None:
     assert not normalize_location("Dublin, United States of America").is_ireland
     assert normalize_location("SF, New York, Seattle, Dublin, Luxembourg").is_dublin
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "Wexford PA, 15090, United States of America",
+        "Wexford, PA",
+        "Carlow, PA",
+        "Dublin, PA",
+        "DUBLIN METHODIST HOSPITAL, United States of America",
+        "Sysco Atlanta  -  Dublin Shuttle Yard, United States of America",
+        "Dublin, OH 0755, United States of America",
+        "Smithfield, NC",
+        "Banner Home Care Sun City West",
+    ],
+)
+def test_american_places_on_us_workday_boards_are_not_irish(raw: str) -> None:
+    """Strings from US Workday tenants that were being read as Irish roles."""
+    location = normalize_location(raw)
+    assert not location.is_ireland and not location.is_dublin
+
+
+@pytest.mark.parametrize(
+    "raw,county",
+    [("Dublin, IRL, United States of America", "Dublin"), ("Santry, D9", "Dublin"),
+     ("Wexford, Co. Wexford", "Wexford"), ("Cork, CO Cork", "Cork"),
+     ("Dublin, IE; London, UK; New York City, NY; Remote-Friendly, United States", "Dublin")],
+)
+def test_irish_places_beside_a_state_like_code_stay_irish(raw: str, county: str) -> None:
+    assert normalize_location(raw).region == county
