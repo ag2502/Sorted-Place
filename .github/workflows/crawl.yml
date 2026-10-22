@@ -214,7 +214,7 @@ jobs:
           JOBFINDER_SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           JOBFINDER_SMTP_FROM: ${{ secrets.SMTP_FROM }}
         # After the deploy, so every job an email links to already has its page live.
-        # Alerts go out once a morning at 11:00 Irish time: the first crawl after it sends
+        # Alerts go out once an evening at 19:00 Irish time: the first crawl after it sends
         # each subscriber's digest of what opened since their last one, and only when
         # something new has opened for what they ticked (alerts/digest.py). Every other
         # crawl's step says it is too early and reads nothing. Never fails the run:

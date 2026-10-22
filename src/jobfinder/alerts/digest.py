@@ -4,7 +4,7 @@ Runs after every crawl (crawl.yml), and sends to a subscriber only when three th
 hold: an alert is on, it is due, and something new has opened that it covers. An email
 with nothing in it is never sent.
 
-Every digest goes out at one time of day, 11:00 in Ireland, and covers what opened since
+Every digest goes out at one time of day, 19:00 in Ireland, and covers what opened since
 the one before: the last 24 hours for a daily alert, the last week for a weekly one.
 
 What counts as new is deliberately strict. A job must have been first seen after the
@@ -38,11 +38,11 @@ from jobfinder.web.links import safe_link
 logger = logging.getLogger(__name__)
 
 DUBLIN = ZoneInfo("Europe/Dublin")
-# The morning send, Irish time, summer or winter. Nothing sends before it; the first
+# The evening send, Irish time, summer or winter. Nothing sends before it; the first
 # crawl after it does. The crawl is dispatched on the hour (crawl.yml), so mail lands a
-# few minutes past eleven, and a crawl that is late sends late rather than skipping a day.
-SEND_AT = time(11, 0)
-# A weekly alert waits for the seventh morning after its last email.
+# little after seven, and a crawl that is late sends late rather than skipping a day.
+SEND_AT = time(19, 0)
+# A weekly alert waits for the seventh evening after its last email.
 WEEKLY_GAP = timedelta(days=6)
 # An advert whose own date is this much older than the last email is not new, however
 # recently we first read it.
@@ -101,7 +101,7 @@ def send_slot(now: datetime) -> datetime:
 
 
 def is_due(row: dict, now: datetime) -> bool:
-    """Past this morning's send time, and not yet sent this morning (or this week)."""
+    """Past this evening's send time, and not yet sent this evening (or this week)."""
     slot = send_slot(now)
     if now < slot:
         return False
