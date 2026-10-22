@@ -445,3 +445,19 @@ def test_american_places_on_us_workday_boards_are_not_irish(raw: str) -> None:
 )
 def test_irish_places_beside_a_state_like_code_stay_irish(raw: str, county: str) -> None:
     assert normalize_location(raw).region == county
+
+
+# A US street named after the country, and the North shortened to "N Ireland" (Target, ITW, Illumina).
+@pytest.mark.parametrize(
+    "raw",
+    ["1400 E Ireland Rd, South Bend, IN 46614-3452, United States of America",
+     "Remote – UK, Scotland, Wales, N Ireland & Northeast – 37, United Kingdom",
+     "N. Ireland - Remote", "Belfast, N Ireland"],
+)
+def test_ireland_street_names_and_n_ireland_are_not_the_republic(raw: str) -> None:
+    assert not normalize_location(raw).is_ireland
+
+
+@pytest.mark.parametrize("raw", ["Ireland - Remote", "Republic of Ireland", "Ireland Street, Cork"])
+def test_the_republic_still_reads_as_ireland(raw: str) -> None:
+    assert normalize_location(raw).is_ireland

@@ -218,7 +218,8 @@ _IRISH_PLACE = re.compile(
 _COUNTY_PREFIX = re.compile(
     r"\b(?:co\.?|county)\s+(" + "|".join(IRISH_COUNTIES) + r")\b", re.IGNORECASE
 )
-_NORTHERN_IRELAND = re.compile(r"\bnorthern\s+ireland\b", re.IGNORECASE)
+# "N Ireland" and "N. Ireland" too, as ITW's and Illumina's boards write it.
+_NORTHERN_IRELAND = re.compile(r"\b(?:northern|n\.?)\s+ireland\b", re.IGNORECASE)
 # The North's counties and towns as its boards write them, bare and beside "Ireland":
 # "Belfast, Antrim, Ireland", "Coleraine, Londonderry, Ireland". With no place in the
 # Republic named too, such a string is in Northern Ireland.
@@ -243,11 +244,15 @@ _US_COUNTRY_SUFFIX = re.compile(
 _NOT_A_LOCALITY = re.compile(r"\bsun city west\b", re.IGNORECASE)
 # The North named some other way: its six counties, or the UK itself.
 _NORTHERN_SIGNAL = re.compile(
-    r"\bnorthern\s+ireland\b|\b(?:co\.?|county)\s+(?:antrim|armagh|down|fermanagh|londonderry|derry|tyrone)\b"
+    r"\b(?:northern|n\.?)\s+ireland\b|\b(?:co\.?|county)\s+(?:antrim|armagh|down|fermanagh|londonderry|derry|tyrone)\b"
     r"|\b(?:united kingdom|uk|gb|great britain)\b",
     re.IGNORECASE,
 )
-_IRELAND_WORD = re.compile(r"\b(?:ireland|[ée]ire)\b", re.IGNORECASE)
+# Not a street named after the country: "1400 E Ireland Rd, South Bend, IN" (Target).
+_IRELAND_WORD = re.compile(
+    r"\b(?:ireland|[ée]ire)\b(?!\s+(?:rd|road|st|street|ave|avenue|dr|drive|blvd|boulevard|ln|lane|way|pkwy|parkway)\b)",
+    re.IGNORECASE,
+)
 # The country code glued to a place, as Workday tenants write it: "Cruiserath - IE",
 # "IRL_City North", "IRL DUBL 11-12". Capitals only, so "i.e." is never one.
 _IRELAND_CODE = re.compile(r"(?<![A-Za-z])(?:IE|IRL)(?![A-Za-z])")
