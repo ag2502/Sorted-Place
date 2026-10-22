@@ -1253,3 +1253,4 @@ The Access Group,workday,theaccessgroup:wd103:access_group_external_careers,2,fa
 Infosys Consulting,workable,infosys-consulting-europe,2,true,named-check,Infosys Consulting's European Workable account,https://apply.workable.com/infosys-consulting-europe/
 ID-Pal,vacancy_headings,"https://www.id-pal.com/careers/|place=Dublin, Ireland",3,false,named-check,"identity verification startup, Dublin",https://www.id-pal.com/careers/
 Sweepr,vacancy_headings,"https://sweepr.com/about-us/work-with-us/|place=Dublin, Ireland",3,false,named-check,"customer support software startup, Dublin",https://sweepr.com/about-us/work-with-us/
+FoodMarble,vacancy_headings,"https://foodmarble.com/more/careers/|place=Dublin, Ireland",3,false,named-check,"digestive health device startup, Dublin",https://foodmarble.com/more/careers/
