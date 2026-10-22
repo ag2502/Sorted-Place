@@ -129,8 +129,9 @@ jobs:
         env:
           JOBFINDER_DATABASE_URL: ${{ env.STATE_DB_URL }}
         # The site reads a bundled file, never the database, so a crawl does not reach
-        # visitors until this rebuilds it and the next step ships it.
-        run: python scripts/export_snapshot.py
+        # visitors until this rebuilds it and the next step ships it. --gzip writes the
+        # copy that is actually uploaded: the raw file is over the CLI's 100 MB limit.
+        run: python scripts/export_snapshot.py --gzip
 
       - name: Keep the accounts project awake
         env:

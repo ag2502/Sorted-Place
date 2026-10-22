@@ -4,8 +4,11 @@
 # of the bundle, so the function fell back to a database path that did not exist and died
 # during startup — every route returning 500, including ones that do not exist.
 #
-# data/jobfinder.db is deliberately absent from this file. It is the only reason the site
-# has anything to serve.
+# The snapshot ships gzipped as data/jobfinder.db.gz, which must never be listed here: it
+# is the only reason the site has anything to serve. The raw data/jobfinder.db is left
+# out because the Vercel CLI refuses any single file over 100 MB on the Hobby plan, and
+# the snapshot outgrew that on 2026-10-22. api/index.py unpacks the .gz on a cold start.
+/data/jobfinder.db
 
 # The local virtualenv and the full crawl database: large, and neither is served.
 job/

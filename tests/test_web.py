@@ -1926,3 +1926,29 @@ def test_the_public_health_check_says_only_whether_it_is_up(monkeypatch):
         monkeypatch.setattr(settings, "admin_token", "s3cret-token")
         assert set(c.get("/healthz").json()) == {"ok"}
         assert "snapshot_path" in c.get("/healthz?token=s3cret-token").json()
+
+
+def test_the_entry_point_unpacks_a_gzipped_snapshot(tmp_path, monkeypatch):
+    """Deployments carry only data/jobfinder.db.gz; the raw file is over the CLI's limit."""
+    import gzip
+    import importlib.util
+    import os
+    import tempfile
+    from pathlib import Path
+
+    monkeypatch.setenv("JOBFINDER_DATABASE_URL", os.environ.get("JOBFINDER_DATABASE_URL", ""))
+    spec = importlib.util.spec_from_file_location(
+        "vercel_entry", Path(__file__).resolve().parents[1] / "api" / "index.py")
+    entry = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(entry)
+
+    body = b"SQLite format 3\0" + os.urandom(4096)
+    packed = tmp_path / "jobfinder.db.gz"
+    packed.write_bytes(gzip.compress(body))
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path / "tmp"))
+    (tmp_path / "tmp").mkdir()
+
+    unpacked = entry._unpack(packed)
+    assert unpacked.read_bytes() == body
+    assert entry._unpack(packed) == unpacked  # a warm container reuses its copy
+    assert not list((tmp_path / "tmp").glob("*.part"))

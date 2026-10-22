@@ -19,8 +19,11 @@ silently falls back to the network in production.
 
 from __future__ import annotations
 
+import gzip
 import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 from fastapi import Request
@@ -33,8 +36,30 @@ _CANDIDATES = [
     Path.cwd() / "data" / "jobfinder.db",
     Path("/var/task/data/jobfinder.db"),
 ]
+# What a deployment actually carries: the Vercel CLI will not upload a single file over
+# 100 MB, so the crawl ships the snapshot gzipped (`export_snapshot.py --gzip`).
+_PACKED = [p.with_name(p.name + ".gz") for p in _CANDIDATES]
+
+
+def _unpack(packed: Path) -> Path | None:
+    """Unpack the gzipped snapshot into the writable temp dir, once per container.
+
+    Named by the packed file's size so a local run never reads a stale copy left by an
+    older snapshot. Written under a temporary name and renamed, so a container that dies
+    mid-write cannot leave a truncated database for the next start to trust.
+    """
+    target = Path(tempfile.gettempdir()) / f"jobfinder-{packed.stat().st_size}.db"
+    if not target.exists():
+        partial = target.with_name(f"{target.name}.{os.getpid()}.part")
+        with gzip.open(packed, "rb") as src, partial.open("wb") as dst:
+            shutil.copyfileobj(src, dst, 1 << 20)
+        partial.replace(target)
+    return target
+
 
 SNAPSHOT = next((p for p in _CANDIDATES if p.exists()), None)
+if SNAPSHOT is None:
+    SNAPSHOT = next((_unpack(p) for p in _PACKED if p.exists()), None)
 
 if SNAPSHOT is not None:
     os.environ["JOBFINDER_DATABASE_URL"] = (
@@ -71,7 +96,7 @@ def healthz(request: Request) -> dict:
     info: dict = {
         "snapshot_found": SNAPSHOT is not None,
         "snapshot_path": str(SNAPSHOT) if SNAPSHOT else None,
-        "candidates": {str(p): p.exists() for p in _CANDIDATES},
+        "candidates": {str(p): p.exists() for p in _CANDIDATES + _PACKED},
         "cwd": str(Path.cwd()),
         "entry_file": str(Path(__file__).resolve()),
         "url_scheme": settings.database_url.split(":")[0],

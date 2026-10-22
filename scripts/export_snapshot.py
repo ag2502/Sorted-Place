@@ -26,8 +26,10 @@ pulling all 5,300 would spend the same egress this snapshot exists to stop spend
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import os
+import shutil
 from pathlib import Path
 
 from sqlalchemy import create_engine, insert, select
@@ -164,6 +166,21 @@ def export(destination: Path) -> Path:
     return destination
 
 
+def pack(snapshot: Path) -> Path:
+    """Write a gzipped copy beside the snapshot, which is what a deployment uploads.
+
+    The Vercel CLI refuses any single file over 100 MB on the Hobby plan, and the
+    snapshot passed that on 2026-10-22 (142 MB) once ~600 more employers were seeded:
+    every deploy after it failed. Gzipped it is about a fifth of the size, and
+    `api/index.py` unpacks it on a cold start in well under a second.
+    """
+    packed = snapshot.with_name(snapshot.name + ".gz")
+    with snapshot.open("rb") as src, gzip.open(packed, "wb", compresslevel=6) as dst:
+        shutil.copyfileobj(src, dst, 1 << 20)
+    print(f"packed:   {packed} ({os.path.getsize(packed) / 1e6:.1f} MB)")
+    return packed
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -172,7 +189,15 @@ def main() -> None:
         default=Path(__file__).resolve().parents[1] / "data" / "jobfinder.db",
         help="where to write the snapshot (default: data/jobfinder.db)",
     )
-    export(parser.parse_args().out)
+    parser.add_argument(
+        "--gzip",
+        action="store_true",
+        help="also write <out>.gz, the copy a deployment uploads",
+    )
+    args = parser.parse_args()
+    snapshot = export(args.out)
+    if args.gzip:
+        pack(snapshot)
 
 
 if __name__ == "__main__":
