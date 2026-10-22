@@ -1248,3 +1248,4 @@ Unisys,workday,unisys:wd5:External,3,true,named-check,Workday site linked from u
 SentinelOne,greenhouse,sentinellabs,2,true,named-check,Greenhouse board named SentinelOne under the slug sentinellabs,https://www.sentinelone.com/careers/
 Frankli,workable,frankli,3,false,named-check,Irish HR software startup,https://getfrankli.com/careers
 Huawei,workable,huawei-ireland,2,false,named-check,Huawei Ireland's own Workable account,https://apply.workable.com/huawei-ireland/
+Workiva,workday,workiva:wd503:careers,2,true,named-check,Workday site on the wd503 host,https://workiva.wd503.myworkdayjobs.com/careers
