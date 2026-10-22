@@ -328,6 +328,39 @@ def test_paging_keeps_the_chosen_sort(client):
     assert '<option value="newest" selected>' in page_two.text
 
 
+def test_newest_first_keeps_to_the_picked_fields_unless_all_newest_is_chosen(client):
+    """Newest first over a graduate search listed every field's newest roles, picked or
+    not. It now keeps to the picked fields, with All newest a tap away."""
+    from jobfinder.matching import rank
+    from jobfinder.web.app import _search_results
+
+    profile = {"fields": ["backend"], "graduate_only": True, "sort": "newest"}
+    picked = _search_results(profile, per_page=100_000)
+    everything = _search_results(profile, per_page=100_000, scope="all")
+    assert picked["scope"] == "fields" and everything["scope"] == "all"
+    assert all(i["tier"] == rank.TIER_CHOSEN for i in picked["items"])
+    assert picked["total"] <= everything["total"]
+    # Best match has no such choice to make.
+    assert _search_results({**profile, "sort": "relevance"})["scope"] is None
+
+    response = client.post(
+        "/search", data={"chosen_fields": ["backend"], "sort": "newest"},
+        headers={"HX-Request": "true"},
+    )
+    assert 'name="scope" value="fields" checked' in response.text
+    assert "#results input[name=scope]" in response.text
+    response = client.post(
+        "/search", data={"chosen_fields": ["backend"], "sort": "newest", "scope": "all"},
+        headers={"HX-Request": "true"},
+    )
+    assert 'name="scope" value="all" checked' in response.text
+    assert "scope=all" in response.headers["HX-Push-Url"]
+    response = client.post(
+        "/search", data={"chosen_fields": ["backend"]}, headers={"HX-Request": "true"},
+    )
+    assert 'name="scope"' not in response.text
+
+
 def test_the_session_holds_only_what_was_typed_and_ticked(client):
     """The CV's reading lives on the profile now, not in the session cookie. What the
     session carries is the form, which is small whatever CV is on file."""

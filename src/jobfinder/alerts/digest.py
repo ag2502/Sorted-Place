@@ -130,10 +130,12 @@ def _is_new(item: dict, since: datetime) -> bool:
 def _section(key: str, heading: str, noun: str, profile: dict, since: datetime) -> Section:
     from jobfinder.web.app import _search_results, _search_url
 
-    context = _search_results(profile, per_page=100_000, since=since)
+    # Every field the search reaches, as before newest first could keep to the picked
+    # ones, and the link asks for the same so it shows what the email listed.
+    context = _search_results(profile, per_page=100_000, since=since, scope="all")
     items = [i for i in context["items"] if _is_new(i, since)]
     link = settings.site_url.rstrip("/") + _search_url(
-        {**profile, "sort": "newest"}, {"view": "list"}
+        {**profile, "sort": "newest"}, {"view": "list", "scope": "all"}
     )
     return Section(key, heading, noun, items, link)
 

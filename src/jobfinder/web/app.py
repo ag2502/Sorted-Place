@@ -102,6 +102,11 @@ DEFAULT_SORT = "relevance"
 # the default because it is the ranking; the cards answer "who is hiring for this".
 VIEWS = ("list", "company")
 DEFAULT_VIEW = "list"
+# Newest first keeps to the fields the searcher picked, or takes in every field the
+# search reaches. Picked fields is the default: a bare date sort put roles from fields
+# nobody asked for at the top just because they were posted this morning.
+SCOPES = ("fields", "all")
+DEFAULT_SCOPE = "fields"
 COMPANIES_PER_PAGE = 12
 
 
@@ -287,7 +292,7 @@ templates.env.filters["link"] = safe_link
 RERUN_BASE = (
     "#finder-form input:not([type=file]), #finder-form select, "
     "#results select[name=sort], #results input[name=show_applied], "
-    "#results input[name=view]"
+    "#results input[name=view], #results input[name=scope]"
 )
 # The filter bar rides along with paging and re-sorting, but a new search from the form
 # starts unfiltered, since the form does not include it.
@@ -979,7 +984,7 @@ URL_KEYS = {
     "intern": "internships_only", "grad": "graduate_only", "pt": "part_time_only", "sort": "sort",
     "cv": "use_cv", "applied": "show_applied", "field": "facet", "co": "company",
     "view": "view", "mode": "mode", "paid": "paid", "pay": "pay", "within": "within", "via": "via",
-    "where": "where", "near": "near",
+    "where": "where", "near": "near", "scope": "scope",
 }
 
 
@@ -1007,6 +1012,8 @@ def _search_url(profile: dict, context: dict) -> str:
         pairs.append(("co", context["company"]))
     if context.get("view") and context["view"] != DEFAULT_VIEW:
         pairs.append(("view", context["view"]))
+    if context.get("scope") and context["scope"] != DEFAULT_SCOPE:
+        pairs.append(("scope", context["scope"]))
     if context.get("mode"):
         pairs.append(("mode", context["mode"]))
     if context.get("paid"):
@@ -1081,6 +1088,7 @@ async def search(
     facet: list[str] = Form(default=[]),
     company: str | None = Form(default=None),
     view: str | None = Form(default=None),
+    scope: str | None = Form(default=None),
     mode: str | None = Form(default=None),
     paid: str | None = Form(default=None),
     pay: str | None = Form(default=None),
@@ -1096,7 +1104,7 @@ async def search(
         "internships_only": internships_only, "graduate_only": graduate_only,
         "part_time_only": part_time_only, "years": years, "q": q, "sort": sort, "show_applied": show_applied,
         "use_cv": use_cv, "facet": facet, "company": company, "view": view,
-        "mode": mode, "paid": paid, "pay": pay, "within": within, "new_only": new_only,
+        "scope": scope, "mode": mode, "paid": paid, "pay": pay, "within": within, "new_only": new_only,
         "via": via, "where": where, "near": near,
     }
     return _search(request, form, page=page, more=bool(more))
@@ -1268,6 +1276,7 @@ def _search(request: Request, form: dict, *, page: int = 1, more: bool = False):
             facet=form.get("facet"),
             company=form.get("company") or None,
             view=form.get("view"),
+            scope=form.get("scope"),
             mode=form.get("mode") or None,
             paid=bool(form.get("paid")),
             pay=form.get("pay"),
@@ -1881,6 +1890,7 @@ def _search_results(
     facet: list[str] | str | None = None,
     company: str | None = None,
     view: str | None = None,
+    scope: str | None = None,
     mode: str | None = None,
     paid: bool = False,
     pay: str | int | None = None,
@@ -1900,6 +1910,9 @@ def _search_results(
     or the counts the bar itself shows, which are taken before either applies.
 
     `view="company"` lays the same rows out as one card per employer instead.
+
+    `scope` only counts under newest first: "fields" (the default) keeps to the fields
+    the searcher picked, "all" takes in every field the search reaches.
     """
     candidate = Candidate(
         skills=set(profile.get("skills") or []),
@@ -2103,6 +2116,13 @@ def _search_results(
                 reverse=(sort_mode == "newest"),
             )
             items = dated + undated
+        # Only newest first offers the choice, and only where fields were picked to keep
+        # to. In the picked fields means exactly those: not the CV's, and not the ones
+        # near them, which "All newest" brings back.
+        scope = scope if scope in SCOPES else DEFAULT_SCOPE
+        scope = scope if sort_mode == "newest" and candidate.fields else None
+        if scope == "fields":
+            items = [i for i in items if i["tier"] == rank.TIER_CHOSEN]
 
         # The filter bar's counts are taken before it narrows anything, and each side is
         # counted within the other: with Amazon picked, the field tabs count Amazon's
@@ -2177,7 +2197,7 @@ def _search_results(
         # been ignored, when the honest answer is "none right now".
         field_counts: dict[str, dict] = {}
         for tier, keys in ((rank.TIER_CHOSEN, candidate.fields),
-                           (rank.TIER_CV, candidate.cv_fields)):
+                           (rank.TIER_CV, [] if scope == "fields" else candidate.cv_fields)):
             for key in keys:
                 if key in FIELDS and key not in field_counts:
                     field_counts[key] = {"key": key, "label": FIELDS[key].label,
@@ -2324,6 +2344,7 @@ def _search_results(
         "page": page,
         "pages": max(1, (len(units) + per_page - 1) // per_page),
         "view": view,
+        "scope": scope,
         "groups": page_groups,
         "query": query or "",
         "new_count": sum(1 for i in items if i["is_new"]),

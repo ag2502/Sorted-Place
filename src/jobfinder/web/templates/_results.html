@@ -84,14 +84,14 @@
       {% if candidate_years > 15 %}15+ years of experience &middot;
       {% else %}asking {{ candidate_years }} year{{ "" if candidate_years == 1 else "s" }} or less &middot;{% endif %}
     {% endif %}
-    {% if query and not chosen_any and total %}Every {{ pt }}job open in Ireland with &ldquo;{{ query }}&rdquo; in the title or company &middot; {% elif part_time_only and not chosen_any and total %}Every part-time job open in Ireland &middot; {% elif (early_only or part_time_only or query) and total %}{{ in_fields }} in or near the fields you picked, then every other one open in Ireland &middot; {% endif %}
-    {% if by_location %}busiest places first, best matches first within each{% elif skill_count %}closest to your CV first{% if cv_name %} ({{ cv_name }}){% endif %}{% else %}best matches first{% endif %}
+    {% if query and not chosen_any and total %}Every {{ pt }}job open in Ireland with &ldquo;{{ query }}&rdquo; in the title or company &middot; {% elif part_time_only and not chosen_any and total %}Every part-time job open in Ireland &middot; {% elif (early_only or part_time_only or query) and total and scope != "fields" %}{{ in_fields }} in or near the fields you picked, then every other one open in Ireland &middot; {% endif %}
+    {% if by_location %}busiest places first, best matches first within each{% elif scope == "fields" %}newest first, only in the fields you picked{% elif scope == "all" %}newest first, across every field{% elif skill_count %}closest to your CV first{% if cv_name %} ({{ cv_name }}){% endif %}{% else %}best matches first{% endif %}
     {% if candidate_years is not none and candidate_years <= 2 and not early_only %}
       &middot; graduate and entry-level jobs included
     {% endif %}
   </p>
 
-  {% if cv_fields %}
+  {% if cv_fields and scope != "fields" %}
   {# The CV points somewhere the boxes do not. Those roles are listed in a band of their
      own below the chosen ones, never mixed in: the boxes say what someone wants to do
      next, and a CV only says what they have done. #}
@@ -183,6 +183,13 @@
       <label class="seg__opt"><input type="radio" name="view" value="list" {% if view != "company" %}checked{% endif %}><span>List</span></label>
       <label class="seg__opt"><input type="radio" name="view" value="company" {% if view == "company" %}checked{% endif %}><span>By company</span></label>
     </div>
+    {% if scope %}
+    {# Newest first in the fields picked, or across every field the search reaches. #}
+    <div class="seg" role="radiogroup" aria-label="Which newest jobs">
+      <label class="seg__opt"><input type="radio" name="scope" value="fields" {% if scope != "all" %}checked{% endif %}><span>Newest in your fields</span></label>
+      <label class="seg__opt"><input type="radio" name="scope" value="all" {% if scope == "all" %}checked{% endif %}><span>All newest</span></label>
+    </div>
+    {% endif %}
   </div>
 
   {# Everything past the tabs, behind the Filters button: a panel under it on a wide
@@ -388,7 +395,7 @@
   .facet--empty{cursor:default}
   .facet--empty .facet__face{background:transparent;border-style:dashed;color:var(--ink-3);box-shadow:none}
   .facet--empty:hover .facet__face{transform:none;border-color:var(--line-strong)}
-  .rbar__view{display:flex;align-items:center;flex:1 1 100%}
+  .rbar__view{display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 100%}
 
   /* The panel behind Filters. On a wide screen it drops from under the button (its
      place is set by the finder's script) and holds its changes until Show jobs. */
