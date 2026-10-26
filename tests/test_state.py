@@ -345,6 +345,28 @@ def test_an_id_repeated_within_one_fetch_does_not_abort_the_run(session, source,
     assert sorted(j.source_job_id for j in _jobs(session)) == ["1", "2"]
 
 
+def test_a_register_your_interest_advert_is_not_kept(session, source, company, run):
+    """A standing call for CVs is never stored, and one stored before closes like a
+    withdrawn advert."""
+    _reconcile(session, source, company, run, ok_result("1", "2"))
+    session.flush()
+
+    calls = FetchResult(status=CrawlStatus.OK, jobs=[
+        make_job("1", title="Register Your Interest"),
+        make_job("2"),
+        make_job("3", title="Join Our Talent Community"),
+    ])
+    _reconcile(session, source, company, run, calls)
+    session.flush()
+    assert sorted(j.source_job_id for j in _jobs(session)) == ["1", "2"]
+    assert _by_id(session, "1").consecutive_misses == 1
+
+    _reconcile(session, source, company, run, calls)
+    session.flush()
+    assert _by_id(session, "1").status is JobStatus.CLOSED
+    assert _by_id(session, "2").status is JobStatus.ACTIVE
+
+
 def test_part_time_is_read_from_the_board_label_and_kept_on_update(session, source, company, run):
     """The board's own label is stored, so the flag survives a backfill and a re-crawl."""
     labelled = make_job("1", title="Customer Assistant")

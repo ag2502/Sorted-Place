@@ -23,11 +23,11 @@ import httpx
 from dateutil import parser as dateparser
 from selectolax.parser import HTMLParser
 
+from jobfinder.normalize.vacancy import is_not_a_vacancy
 from jobfinder.sources.base import BaseAdapter, RawJob, register
 from jobfinder.sources.jsonld import iter_ld_objects
 
 CODE = re.compile(r"/apply/([A-Za-z0-9]+)/")
-NOT_A_VACANCY = re.compile(r"expression of interest|talent community", re.I)
 
 
 def _clean(text: str) -> str:
@@ -44,7 +44,7 @@ def parse_board(page: str) -> list[tuple[str, str, str, str | None, str | None]]
         url = (link.attributes.get("href") or "").strip()
         title = _clean(link.text())
         code = CODE.search(url)
-        if code is None or not title or NOT_A_VACANCY.search(title):
+        if code is None or not title or is_not_a_vacancy(title):
             continue
         location = department = None
         for detail in item.css(".list-group-item-text li"):

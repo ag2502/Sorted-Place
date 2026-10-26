@@ -36,6 +36,7 @@ from sqlalchemy import create_engine, insert, select
 
 from jobfinder.core.db import engine as source_engine
 from jobfinder.core.models import Base
+from jobfinder.normalize.vacancy import is_not_a_vacancy
 
 # SQLite variables per statement are capped (999 on older builds), and a job_postings row
 # is 23 columns wide. 400 rows keeps every table well inside that ceiling.
@@ -144,6 +145,10 @@ def export(destination: Path) -> Path:
                 )
 
             rows = [dict(row._mapping) for row in src.execute(stmt)]
+            if table.name == "job_postings":
+                # The crawl stops keeping these, but a row from before that waits a
+                # crawl or two to close; the site drops it at the next deploy.
+                rows = [row for row in rows if not is_not_a_vacancy(row["title"])]
             totals[table.name] = len(rows)
             for start in range(0, len(rows), CHUNK_ROWS):
                 dst.execute(insert(table), rows[start : start + CHUNK_ROWS])

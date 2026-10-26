@@ -53,6 +53,7 @@ from jobfinder.normalize.location import (
     normalize_location,
 )
 from jobfinder.normalize.text import html_to_text
+from jobfinder.normalize.vacancy import is_not_a_vacancy
 from jobfinder.sources.base import FetchResult, RawJob
 
 logger = logging.getLogger(__name__)
@@ -239,6 +240,10 @@ def _upsert_jobs(
 
     for raw in jobs:
         if not raw.source_job_id or not raw.title:
+            continue
+        if is_not_a_vacancy(raw.title):
+            # A standing call for CVs, not a role. Left unseen, so a row kept from
+            # before this rule closes the way any withdrawn advert does.
             continue
         if raw.source_job_id in seen:
             # Two postings under one id would break the unique constraint and, with it,
