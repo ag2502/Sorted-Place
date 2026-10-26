@@ -1747,12 +1747,15 @@ def part_time_jobs(monkeypatch):
             ("Fota Island Resort", "Christmas Bar Staff", "", None, True),
             ("Spar", "Area Manager", "Full time.", "Dublin", False),
         ]
+        # Where an advert names its town; the rest name only their county.
+        towns = {"Healthcare Assistant, Gorey": "Gorey, Co. Wexford",
+                 "Healthcare Assistant, New Ross": "New Ross, Wexford"}
         for index, (employer, title, advert, county, part) in enumerate(rows):
             company_id, source_id = ids[employer]
             session.add(JobPosting(
                 company_id=company_id, source_id=source_id, source_job_id=str(index),
                 dedup_key=f"k{index}", title=title, description=advert,
-                url=f"https://example.ie/{index}", location_raw=county or "Ireland",
+                url=f"https://example.ie/{index}", location_raw=towns.get(title, county or "Ireland"),
                 is_dublin=county == "Dublin", is_ireland=True, region=county, is_remote=False,
                 is_part_time=part, needs_location_review=False, status=JobStatus.ACTIVE,
                 consecutive_misses=0, posted_at=now - timedelta(hours=index),
@@ -1811,6 +1814,38 @@ def test_part_time_filters_from_the_address(client, part_time_jobs):
     assert html.count('class="ptrow"') == 1
     # Junk in the address is ignored, not an error.
     assert client.get("/part-time?county=Atlantis&when=never&co=x&n=abc").status_code == 200
+
+
+def test_part_time_filters_to_within_so_many_km_of_an_eircode(client, part_time_jobs):
+    # Y25 is Gorey. New Ross is about 54 km away, and Wexford town, where a role naming
+    # only County Wexford is measured to, about 39 km.
+    html = client.get("/part-time?near=Y25&km=10").text
+    assert html.count('class="ptrow"') == 1 and "Healthcare Assistant, Gorey" in html
+    assert 'class="ptrow__km">under 1 km' in html
+    html = client.get("/part-time?near=Y25&km=50").text
+    assert html.count('class="ptrow"') == 1
+    # Roles that name only their county come in when asked for, without a distance.
+    html = client.get("/part-time?near=Y25&km=50&rough=1").text
+    assert html.count('class="ptrow"') == 2 and "Wexford Town" in html
+    assert 'class="ptrow__km is-rough">town not stated' in html
+    # A whole Eircode is read for its area alone, and the rest is never kept.
+    response = client.get("/part-time?near=y25%20x2k7&km=10", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/part-time?km=10&near=Y25"
+    html = client.get("/part-time?near=y25%20x2k7&km=10").text
+    assert 'name="near" form="pt" value="Y25"' in html and "X2K7" not in html.upper()
+    # Something that is not an Eircode is ignored, not an error.
+    html = client.get("/part-time?near=Z99&km=7").text
+    assert html.count('class="ptrow"') == 7
+
+
+def test_part_time_rows_carry_where_they_are(client, part_time_jobs):
+    data = _part_time_data(client.get("/part-time").text)
+    rows = {row[1]: row for row in data["rows"]}
+    assert rows["Healthcare Assistant, Gorey"][-1] == 1
+    assert rows["Healthcare Assistant, Wexford Town"][-1] == 0
+    assert rows["Christmas Bar Staff"][-3:] == [None, None, 0]
+    assert data["areas"]["Y25"][2] == "Gorey" and len(data["areas"]) == 139
 
 
 def test_part_time_employers_take_turns_within_a_day():

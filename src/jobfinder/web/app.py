@@ -77,6 +77,7 @@ from jobfinder.normalize.dedup import (
 )
 from jobfinder.normalize.experience import matches_experience
 from jobfinder.normalize import facts as advert_facts
+from jobfinder.normalize import geo
 from jobfinder.normalize.location import COUNTY_NEIGHBOURS
 from jobfinder.normalize import shifts
 from jobfinder.normalize.taxonomy import FIELDS, GROUPS, classify_title, extract_skills, is_technical
@@ -3330,6 +3331,9 @@ COUNTY_CENTRES = {
 # The county value for a role whose advert names only the country.
 NO_COUNTY = "ireland"
 PART_TIME_PAGE = 30
+# How far from an Eircode, in km as the crow flies.
+NEAR_KM = (2, 5, 10, 25, 50)
+DEFAULT_KM = 10
 
 # Reading every advert for its hours costs about a quarter of a second for the whole
 # part-time list, so each job's reading is kept until the next crawl changes the data.
@@ -3407,6 +3411,7 @@ def _part_time_jobs(session) -> tuple[list[dict], list[dict]]:
         posted = _as_utc(row.posted_at) or _as_utc(row.first_seen_at)
         first_seen = _as_utc(row.first_seen_at)
         name, website = companies.get(row.company_id, ("Unknown", None))
+        county = "Dublin" if row.is_dublin else (row.region or NO_COUNTY)
         jobs.append({
             "id": row.id,
             "title": row.title,
@@ -3414,7 +3419,10 @@ def _part_time_jobs(session) -> tuple[list[dict], list[dict]]:
             "company": name,
             "domain": _logo_domain(name, website),
             "place": _place_label(row) or "Ireland",
-            "county": "Dublin" if row.is_dublin else (row.region or NO_COUNTY),
+            "county": county,
+            # Where "Near an Eircode" measures to: (lat, lng, exact), exact False for a
+            # role that names only its county, or None for one naming neither.
+            "point": geo.place_point(row.location_raw, None if county == NO_COUNTY else county),
             "kind": kind,
             "when": bits,
             "when_names": [n for n, bit in shifts.WHEN_BITS.items() if bits & bit],
@@ -3478,8 +3486,17 @@ def _part_time_filter(jobs: list[dict], picked: dict) -> list[dict]:
     browser without JS."""
     want = shifts.when_bits(set(picked["when"]))
     query = picked["q"].casefold()
+    origin = geo.area_point(picked["near"]) if picked["near"] else None
     kept = []
     for job in jobs:
+        if origin:
+            # A role naming only its county is measured to the county's main town, which
+            # may be nowhere near it, so it comes in only when asked for.
+            if not job["point"] or not (job["point"][2] or picked["rough"]):
+                continue
+            job["km"] = geo.distance_km(origin[:2], job["point"][:2])
+            if job["km"] > picked["km"]:
+                continue
         if want and not job["when"] & want and not (picked["unstated"] and not job["when"]):
             continue
         if picked["county"] and job["county"] != picked["county"]:
@@ -3507,7 +3524,18 @@ def part_time(request: Request):
         "kinds": [k for k in params.getlist("kind") if k in PART_TIME_KIND_LABELS],
         "company": int(company) if company.isdigit() else None,
         "q": params.get("q", "").strip()[:80],
+        # Only an Eircode's routing area is ever read: "D02 X285" is kept as "D02".
+        "near": geo.routing_area(params.get("near", "")) or "",
+        "rough": params.get("rough") == "1",
+        "km": int(km) if (km := params.get("km", "")).isdigit() and int(km) in NEAR_KM else DEFAULT_KM,
     }
+    # A whole Eircode typed without JS, or pasted into a link, is cut to its area in
+    # the address too, so links built from it (Show more, sign in) never carry the rest.
+    if params.get("near", "") not in ("", picked["near"]):
+        pairs = [(k, v) for k, v in params.multi_items() if k != "near"]
+        pairs += [("near", picked["near"])] if picked["near"] else []
+        return RedirectResponse("/part-time" + ("?" + urlencode(pairs) if pairs else ""),
+                                status_code=303)
     # Show more, for a browser without JS: a link asking for a longer first page.
     limit = params.get("n", "")
     limit = min(max(int(limit), PART_TIME_PAGE), 3000) if limit.isdigit() else PART_TIME_PAGE
@@ -3551,9 +3579,14 @@ def part_time(request: Request):
         "rows": [
             [j["id"], j["title"], emp_index.get(j["company_id"], -1), j["place"],
              j["county"], j["kind"], j["when"], j["hours"] or "", j["age"], int(j["new"]),
-             safe_link(j["url"]), j["advert_key"] if account else "", int(j["applied"])]
+             safe_link(j["url"]), j["advert_key"] if account else "", int(j["applied"]),
+             *([round(j["point"][0], 3), round(j["point"][1], 3), int(j["point"][2])]
+               if j["point"] else [None, None, 0])]
             for j in jobs
         ],
+        # Each routing area's middle, so an Eircode is looked up on the device.
+        "areas": {key: [lat, lng, town] for key, (lat, lng, town) in geo.areas().items()},
+        "km": NEAR_KM,
         "employers": [[e["name"], e["domain"], e["id"]] for e in employers],
         "when": shifts.WHEN_BITS,
         "whenLabels": shifts.WHEN_LABELS,
@@ -3583,6 +3616,9 @@ def part_time(request: Request):
         employers=employers,
         top=[e for e in employers if e["domain"]][:14],
         picked=picked,
+        near_km=NEAR_KM,
+        default_km=DEFAULT_KM,
+        near_town=(geo.area_point(picked["near"]) or (0, 0, ""))[2],
         picked_company=next((e for e in employers if e["id"] == picked["company"]), None),
         # Said whenever there is seasonal work open, whichever festival it is for: the
         # note is a live count like everything else on the desk, and names no season.

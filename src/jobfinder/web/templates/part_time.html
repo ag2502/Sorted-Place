@@ -11,7 +11,8 @@
 <li class="ptrow" data-i="{{ j.id }}">
   {{ logo(j.company, j.domain, "ptrow__logo") }}
   <div class="ptrow__main">
-    <p class="ptrow__top"><span class="ptrow__co">{{ j.company }}</span><span class="ptrow__where"><svg aria-hidden="true"><use href="#i-pin"/></svg>{{ j.place }}</span></p>
+    <p class="ptrow__top"><span class="ptrow__co">{{ j.company }}</span><span class="ptrow__where"><svg aria-hidden="true"><use href="#i-pin"/></svg>{{ j.place }}</span>
+      {%- if j.km is defined %}<span class="ptrow__km{% if not j.point[2] %} is-rough{% endif %}">{{ "town not stated" if not j.point[2] else "under 1 km" if j.km < 1 else (j.km|round|int) ~ " km" }}</span>{% endif %}</p>
     <a class="ptrow__title" href="/jobs/{{ j.id }}">{{ j.title }}</a>
     <p class="ptrow__chips">
       {%- if j.hours %}<span class="chip chip--hrs"><svg aria-hidden="true"><use href="#k-clock"/></svg>{{ j.hours }}</span>{% endif -%}
@@ -155,6 +156,31 @@
           {% if no_county %}
           <label class="pick"><input type="radio" name="county" value="ireland" form="pt" {% if picked.county == 'ireland' %}checked{% endif %}><span>County not stated <em data-county-n="ireland">{{ no_county }}</em></span></label>
           {% endif %}
+        </div>
+        {# Near an Eircode: only its routing area (the first three characters) is read,
+           and the distance is worked out on the device. #}
+        <div class="pt-near{% if picked.near %} is-on{% endif %}" data-near>
+          <label class="pt-near__label" for="pt-near">Near an Eircode</label>
+          <div class="pt-near__row">
+            <input id="pt-near" class="pt-near__code" name="near" form="pt" value="{{ picked.near }}"
+                   placeholder="D02 X285" maxlength="8" autocomplete="postal-code" autocapitalize="characters"
+                   spellcheck="false" enterkeyhint="done" aria-describedby="pt-near-read">
+            <div class="pt-near__km" role="radiogroup" aria-label="How far from it">
+              {% for k in near_km %}
+              <label class="pick"><input type="radio" name="km" value="{{ k }}" form="pt" {% if picked.km == k %}checked{% endif %}{% if k == default_km %} data-default{% endif %}><span>{{ k }} km</span></label>
+              {% endfor %}
+            </div>
+          </div>
+          <label class="switch pt-near__rough" data-rough {% if not picked.near %}hidden{% endif %}>
+            <input type="checkbox" name="rough" value="1" form="pt" {% if picked.rough %}checked{% endif %}>
+            <span class="box" aria-hidden="true"></span>
+            <span>Also jobs that name only the county <em data-rough-n></em></span>
+          </label>
+          <p class="pt-near__read" id="pt-near-read" data-near-read aria-live="polite">
+            {%- if picked.near %}Within <b>{{ picked.km }} km</b> of {{ picked.near }}, {{ near_town }}: {{ "{:,}".format(shown_total) }} {{ "job" if shown_total == 1 else "jobs" }}.
+            {%- else %}Only the first three characters are used: your area, not your address.{% endif -%}
+          </p>
+          <p class="pt-near__credit">Places from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a></p>
         </div>
         <p class="pt-map__read" data-map-read aria-live="polite">
           {%- if picked.county and picked.county != 'ireland' %}{{ picked.county }}{% else %}Every county, shaded by how many jobs it has.{% endif -%}
@@ -380,6 +406,24 @@
   .pick input:focus-visible + span{outline:2.5px solid var(--aqua);outline-offset:2px}
   .pt-map__read{margin:10px 0 0;font-size:13px;color:var(--ink-3);min-height:1.5em}
   .pt-map__read b{color:var(--ink);font-weight:650}
+  .pt-near{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .pt-near__label{display:block;margin:0 0 7px;font-size:13.5px;font-weight:650;color:var(--ink)}
+  .pt-near__row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .pt-near__code{width:7.6em;min-height:34px;padding:5px 12px;border-radius:999px;background:var(--win-bar);
+    font-family:var(--mono);font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+  .pt-near__code::placeholder{letter-spacing:.06em;color:var(--ink-3);opacity:.7}
+  .pt-near__code:focus{background:var(--surface)}
+  .pt-near__code[aria-invalid="true"]{border-color:var(--stamp-deep)}
+  .pt-near__km{display:flex;flex-wrap:wrap;gap:5px}
+  .pt-near__km .pick span{padding:5px 10px;font-family:var(--mono);font-size:12px}
+  .pt-near:not(.is-on) .pt-near__km{opacity:.55}
+  .pt-near__rough{margin:10px 0 0;font-size:13px;color:var(--ink-2)}
+  .pt-near__rough[hidden]{display:none}
+  .pt-near__rough em{font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+  .pt-near__read{margin:8px 0 0;font-size:13px;color:var(--ink-3);min-height:1.5em}
+  .pt-near__read b{color:var(--ink);font-weight:650}
+  .pt-near__credit{margin:4px 0 0;font-size:11.5px;color:var(--ink-3)}
+  .pt-near__credit a{color:inherit}
 
   /* ---------------------------------------------------------- the kinds */
   .kinds{padding:14px 12px 12px}
@@ -460,6 +504,8 @@
   .ptrow__co{font-weight:550;color:var(--ink-2)}
   .ptrow__where{display:inline-flex;align-items:center;gap:3px}
   .ptrow__where svg{width:12px;height:12px}
+  .ptrow__km{font-family:var(--mono);font-size:11.5px;color:var(--aqua-deep);font-weight:600}
+  .ptrow__km.is-rough{color:var(--ink-3);font-weight:500}
   .ptrow__title{display:inline;font-size:1.04rem;font-weight:650;letter-spacing:-.015em;line-height:1.3;color:var(--ink);
     text-decoration:none;background-image:linear-gradient(var(--aqua),var(--aqua));background-size:0 1.5px;
     background-repeat:no-repeat;background-position:0 100%;transition:background-size .35s var(--ease)}
@@ -560,7 +606,7 @@
 (function () {
   var data = JSON.parse(document.getElementById('pt-data').textContent);
   // Each row arrives as a bare list (see `data` in app.py's part_time); named here once.
-  var ROW = ['i', 't', 'e', 'p', 'c', 'k', 'w', 'h', 'a', 'n', 'u', 'x', 'd'];
+  var ROW = ['i', 't', 'e', 'p', 'c', 'k', 'w', 'h', 'a', 'n', 'u', 'x', 'd', 'y', 'o', 'g'];
   var JOBS = data.rows.map(function (r) {
     var j = {}; ROW.forEach(function (key, n) { j[key] = r[n]; }); return j;
   });
@@ -571,19 +617,22 @@
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
   var fmt = function (n) { return n.toLocaleString('en-IE'); };
-  var shown = [], limit = rowsEl.children.length || PAGE;
+  var shown = [], limit = rowsEl.children.length || PAGE, lastNear = null;
 
   // ---------------------------------------------------------------- state
   // Read from the controls themselves, which the server set from the address.
   function state() {
-    var s = { when: [], unstated: false, county: '', kinds: [], co: null, q: '' };
+    var s = { when: [], unstated: false, county: '', kinds: [], co: null, q: '', near: null, km: data.km[0], rough: false };
     $$('input[form="pt"]').forEach(function (el) {
       if (el.type === 'checkbox' && el.checked) {
         if (el.name === 'when') s.when.push(el.value);
         else if (el.name === 'kind') s.kinds.push(el.value);
         else if (el.name === 'unstated') s.unstated = true;
+        else if (el.name === 'rough') s.rough = true;
       } else if (el.type === 'radio' && el.checked && el.name === 'county') s.county = el.value;
+      else if (el.type === 'radio' && el.checked && el.name === 'km') s.km = +el.value;
       else if (el.name === 'q') s.q = el.value.trim().toLowerCase();
+      else if (el.name === 'near') s.near = areaOf(el.value);
     });
     s.co = company;
     return s;
@@ -593,6 +642,29 @@
     return v && /^\d+$/.test(v) ? +v : null;
   })();
 
+  // An Eircode's routing area, the same reading as `geo.routing_area` in Python: the
+  // first three characters, with or without the rest. Null for anything else.
+  var EIRCODE = /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?([0-9AC-FHKNPRTV-Y]{4})?$/i;
+  function areaOf(text) {
+    var m = EIRCODE.exec(String(text || '').trim().replace(/\s+/g, ' '));
+    var key = m && m[1].toUpperCase();
+    return key && data.areas[key] ? key : null;
+  }
+  // As the crow flies, kept on the row until the Eircode changes.
+  function kmTo(j, key) {
+    if (j.y === null) return null;
+    if (j._near !== key) {
+      var a = data.areas[key], r = Math.PI / 180;
+      var h = Math.pow(Math.sin((j.y - a[0]) * r / 2), 2) +
+        Math.cos(a[0] * r) * Math.cos(j.y * r) * Math.pow(Math.sin((j.o - a[1]) * r / 2), 2);
+      j._near = key; j._km = 6371 * 2 * Math.asin(Math.sqrt(h));
+    }
+    return j._km;
+  }
+  function kmLabel(j, km) {
+    return !j.g ? 'town not stated' : km < 1 ? 'under 1 km' : Math.round(km) + ' km';
+  }
+
   // The same rule as `_part_time_filter` in app.py. `skip` leaves one choice out, which
   // is how each control's counts say what picking it would give.
   function fits(j, s, skip) {
@@ -601,6 +673,11 @@
       if (!(j.w & want) && !(s.unstated && !j.w)) return false;
     }
     if (skip !== 'county' && s.county && j.c !== s.county) return false;
+    if (skip !== 'near' && s.near) {
+      var km = kmTo(j, s.near);
+      // Naming only the county, a role is measured to its main town; in when asked for.
+      if (km === null || km > s.km || (!j.g && !s.rough)) return false;
+    }
     if (skip !== 'kind' && s.kinds.length && s.kinds.indexOf(j.k) === -1) return false;
     if (skip !== 'co' && s.co !== null && (EMPS[j.e] || [])[2] !== s.co) return false;
     if (skip !== 'q' && s.q) {
@@ -643,7 +720,9 @@
     li.setAttribute('data-i', j.i);
     li.innerHTML = logo(emp[0], emp[1], 'ptrow__logo') +
       '<div class="ptrow__main"><p class="ptrow__top"><span class="ptrow__co">' + esc(emp[0]) + '</span>' +
-      '<span class="ptrow__where"><svg aria-hidden="true"><use href="#i-pin"/></svg>' + esc(j.p) + '</span></p>' +
+      '<span class="ptrow__where"><svg aria-hidden="true"><use href="#i-pin"/></svg>' + esc(j.p) + '</span>' +
+      (s.near && j.y !== null ? '<span class="ptrow__km' + (j.g ? '' : ' is-rough') + '">' +
+        kmLabel(j, kmTo(j, s.near)) + '</span>' : '') + '</p>' +
       '<a class="ptrow__title" href="/jobs/' + j.i + '">' + esc(j.t) + '</a>' +
       '<p class="ptrow__chips">' + chips + '</p></div>' +
       '<div class="ptrow__act">' + applyFor(j, emp[0]) + '</div>';
@@ -738,7 +817,29 @@
       var n = shown.length;
       read.innerHTML = '<b>' + esc(s.county) + '</b>: ' + fmt(n) + (n === 1 ? ' job fits' : ' jobs fit');
     } else if (s.county === 'ireland') read.textContent = 'Adverts that name only Ireland, not a county.';
+    else if (s.near) read.textContent = 'Shaded by how many are within ' + s.km + ' km of ' + s.near + '.';
     else read.textContent = 'Every county, shaded by how many jobs it has.';
+  }
+
+  function paintNear(s) {
+    var box = $('[data-near]'), input = $('input[name="near"]'), read = $('[data-near-read]');
+    var typed = input.value.trim(), bad = typed.length >= 3 && !s.near;
+    box.classList.toggle('is-on', !!s.near);
+    // How many more the county-only roles would add, counted as everything else stands.
+    var rough = $('[data-rough]'), extra = 0;
+    if (s.near) {
+      var t = JSON.parse(JSON.stringify(s)); t.rough = true;
+      JOBS.forEach(function (j) { if (!j.g && fits(j, t)) extra++; });
+    }
+    rough.hidden = !s.near || (!extra && !s.rough);
+    $('[data-rough-n]').textContent = fmt(extra);
+    input.setAttribute('aria-invalid', bad ? 'true' : 'false');
+    if (s.near) {
+      var n = shown.length;
+      read.innerHTML = 'Within <b>' + s.km + ' km</b> of ' + esc(s.near) + ', ' + esc(data.areas[s.near][2]) + ': ' +
+        fmt(n) + (n === 1 ? ' job' : ' jobs') + '.';
+    } else if (bad) read.textContent = 'That doesn’t look like an Eircode. They start like D02 or T12.';
+    else read.textContent = 'Only the first three characters are used: your area, not your address.';
   }
 
   var X = '<svg aria-hidden="true"><use href="#i-x"/></svg>';
@@ -746,6 +847,7 @@
     var ul = $('[data-picked]'), html = '';
     s.when.forEach(function (w) { html += '<li><button type="button" data-drop="when:' + w + '" aria-label="Remove ' + esc(data.whenLabels[w]) + '">' + esc(data.whenLabels[w]) + X + '</button></li>'; });
     if (s.county) html += '<li><button type="button" class="is-place" data-drop="county" aria-label="Remove the county">' + (s.county === 'ireland' ? 'County not stated' : esc(s.county)) + X + '</button></li>';
+    if (s.near) html += '<li><button type="button" class="is-place" data-drop="near" aria-label="Remove the Eircode">Within ' + s.km + ' km of ' + esc(s.near) + X + '</button></li>';
     s.kinds.forEach(function (k) { html += '<li><button type="button" class="is-kind" data-drop="kind:' + k + '" aria-label="Remove ' + esc(data.kinds[k]) + '">' + esc(data.kinds[k]) + X + '</button></li>'; });
     if (s.co !== null) {
       var e = EMPS.filter(function (x) { return x[2] === s.co; })[0];
@@ -767,6 +869,9 @@
     s.when.forEach(function (w) { ways.push(['when:' + w, 'Any time, not ' + data.whenLabels[w].toLowerCase()]); });
     if (s.when.length && !s.unstated) ways.push(['unstated', 'Include adverts that don’t say']);
     if (s.county) ways.push(['county', 'All of Ireland']);
+    if (s.near && wider(s.km)) ways.push(['km', 'Within ' + wider(s.km) + ' km']);
+    if (s.near && !s.rough) ways.push(['rough', 'Also jobs that name only the county']);
+    if (s.near) ways.push(['near', 'Anywhere, not near ' + s.near]);
     s.kinds.forEach(function (k) { ways.push(['kind:' + k, 'Not only ' + data.kinds[k].toLowerCase()]); });
     if (s.co !== null) ways.push(['co', 'Every employer']);
     if (s.q) ways.push(['q', 'Clear the search']);
@@ -781,11 +886,15 @@
       return '<button type="button" class="btn btn--ghost" data-drop="' + x[0][0] + '">' + esc(x[0][1]) + ' <span class="typed">' + fmt(x[1]) + '</span></button>';
     }).join('');
   }
+  function wider(km) { return data.km.filter(function (k) { return k > km; })[0]; }
   function loosen(s, how) {
     var p = how.split(':');
     if (p[0] === 'when') s.when = s.when.filter(function (w) { return w !== p[1]; });
     else if (p[0] === 'kind') s.kinds = s.kinds.filter(function (k) { return k !== p[1]; });
     else if (p[0] === 'county') s.county = '';
+    else if (p[0] === 'near') s.near = null;
+    else if (p[0] === 'km') s.km = wider(s.km);
+    else if (p[0] === 'rough') s.rough = true;
     else if (p[0] === 'co') s.co = null;
     else if (p[0] === 'q') s.q = '';
     else if (p[0] === 'unstated') s.unstated = true;
@@ -797,6 +906,9 @@
     s.when.forEach(function (w) { q.append('when', w); });
     if (s.unstated) q.set('unstated', '1');
     if (s.county) q.set('county', s.county);
+    if (s.near) q.set('near', s.near);
+    if (s.near && s.rough) q.set('rough', '1');
+    if (s.near && s.km !== +$('input[name="km"][data-default]').value) q.set('km', s.km);
     s.kinds.forEach(function (k) { q.append('kind', k); });
     if (s.co !== null) q.set('co', s.co);
     var typed = $('input[name="q"][form="pt"]').value.trim();
@@ -848,7 +960,8 @@
       name(true);
       document.startViewTransition(go).finished.then(function () { name(false); }, function () { name(false); });
     } else { renderRows(s, 0); }
-    counts(s); paintWeek(s); paintMap(s); paintPicked(s);
+    counts(s); paintWeek(s); paintMap(s); paintPicked(s); paintNear(s);
+    lastNear = s.near;
     if (!(opts && opts.keepAddress)) writeAddress(s);
   }
 
@@ -856,8 +969,19 @@
   document.documentElement.classList.add('pt-ready');
   var typing;
   document.addEventListener('change', function (e) {
-    if (e.target.getAttribute && e.target.getAttribute('form') === 'pt' && e.target.name !== 'q') update();
+    if (e.target.getAttribute && e.target.getAttribute('form') === 'pt' &&
+        e.target.name !== 'q' && e.target.name !== 'near') update();
   });
+  var nearBox = $('input[name="near"]');
+  nearBox.addEventListener('input', function () {
+    clearTimeout(typing);
+    typing = setTimeout(function () {
+      var now = areaOf(nearBox.value);
+      // Typing out the rest of an Eircode keeps the same area, so the list stays put.
+      if (now !== lastNear) { lastNear = now; update({ quiet: true }); } else paintNear(state());
+    }, 160);
+  });
+  nearBox.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); nearBox.blur(); } });
   var search = $('input[name="q"][form="pt"]');
   search.addEventListener('input', function () { clearTimeout(typing); typing = setTimeout(function () { update({ quiet: true }); }, 140); });
   form.addEventListener('submit', function (e) { e.preventDefault(); update(); });
@@ -882,12 +1006,15 @@
       if (how === 'all') {
         $$('input[form="pt"]').forEach(function (el) {
           if (el.type === 'checkbox') el.checked = false;
-          else if (el.type === 'radio') el.checked = el.value === '';
+          else if (el.type === 'radio') el.checked = el.name === 'km' ? el.hasAttribute('data-default') : el.value === '';
           else el.value = '';
         });
         company = null;
       } else if (p[0] === 'when' || p[0] === 'kind') $('input[name="' + p[0] + '"][value="' + p[1] + '"]').checked = false;
       else if (p[0] === 'county') $('input[name="county"][value=""]').checked = true;
+      else if (p[0] === 'near') nearBox.value = '';
+      else if (p[0] === 'rough') $('input[name="rough"]').checked = true;
+      else if (p[0] === 'km') $('input[name="km"][value="' + wider(state().km) + '"]').checked = true;
       else if (p[0] === 'co') company = null;
       else if (p[0] === 'q') search.value = '';
       else if (p[0] === 'unstated') $('input[name="unstated"]').checked = true;
@@ -982,7 +1109,8 @@
   (function () {
     var s = state();
     shown = JOBS.filter(function (j) { return fits(j, s); });
-    counts(s); paintWeek(s); paintMap(s); paintPicked(s);
+    counts(s); paintWeek(s); paintMap(s); paintPicked(s); paintNear(s);
+    lastNear = s.near;
     if (!shown.length) paintEmpty(s);
   })();
 })();
